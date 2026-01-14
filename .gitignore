@@ -2,9 +2,6 @@
 __pycache__/
 *.pyc
 
-# Local seed scripts
-sample_users.py
-
 # Environment files
 .env
 .env.*
