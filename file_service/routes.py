@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
-from .models import File
-from .dashboard import get_files_for_user
+from models import File
+from dashboard import get_files_for_user
 
 
 bp = Blueprint("routes", __name__)

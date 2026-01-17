@@ -1,5 +1,5 @@
 from datetime import datetime
-from .db import db
+from db import db
 
 class File(db.Model):
     __tablename__ = "files"

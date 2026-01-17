@@ -1,4 +1,4 @@
-from .models import File
+from models import File
 
 def get_files_for_user(user_id: int):
     """
