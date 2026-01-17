@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from models import File
+from .models import File
 
 
 bp = Blueprint("routes", __name__)
@@ -27,6 +27,7 @@ def dashboard():
             {
                 "id": f.id,
                 "filename": f.filename,
+                "storage_path": f.storage_path,
                 "content_type": f.content_type,
                 "size_bytes": f.size_bytes,
                 "created_at": f.created_at.isoformat(),
