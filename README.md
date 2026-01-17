@@ -1,418 +1,219 @@
-# DevOps_Oct2025_Team2_Assignment-
-Local Setup (Docker DB + Flask Services) — Team Guide
-0) What we’re building locally
+This repository explains how the team runs the project locally using a standardised setup, so that every developer, lecturer, and tester can run the system the same way.
 
-We run everything locally using:
+At a high level:
 
-Docker Compose to start PostgreSQL databases
+The project consists of multiple Flask backend services (e.g. auth-service, file-service).
 
-Flask services (e.g., auth-service, file-service)
+Each service has its own PostgreSQL database, started using Docker Compose.
 
-Migrations (Option B) to create tables from version-controlled schema instructions
+Databases run inside Docker containers, so no one needs to install PostgreSQL manually.
 
-You will have your own local DB data, I will have my own. We share schema via Git (migrations), not the data itself.
+Database schema (tables) are shared using migration files committed to Git — data is not shared.
 
-1) What is docker-compose.yml and why do we need it?
+Each developer has their own local data, but everyone uses the same schema.
 
-docker-compose.yml is a configuration file that tells Docker:
+Key Ideas Explained Simply
+1. Docker is used to run databases
 
-“Start these containers with these settings.”
+Docker Compose starts the databases (auth-db, file-db).
 
-In our project, it starts two PostgreSQL databases:
+Everyone runs the same database version.
 
-auth-db (for auth-service)
+Data is stored in Docker volumes, so restarting containers does not delete data.
 
-file-db (for file-service)
+Data is only deleted if volumes are explicitly removed.
 
-Why this is good
+2. Each service is independent
 
-No one needs to install PostgreSQL manually
+Each backend service:
 
-Everyone runs the same DB version
+Has its own Flask app
 
-Easy for markers/QA to run the project
+Has its own database connection
 
-Volumes (IMPORTANT: why you won’t lose data)
+Has its own tables (models)
 
-Inside docker-compose.yml, we use volumes like this:
+Has its own migrations folder
 
-volumes:
-  auth_db_data:
-  file_db_data:
+This prevents services from interfering with each other.
+
+3. Database tables are created using migrations (not manually)
+
+Developers define tables using Python classes (models.py).
+
+Flask-Migrate generates migration scripts (instructions).
+
+These scripts are committed to Git.
+
+Anyone else can recreate the same tables by running the migration commands.
+
+This ensures:
+
+Everyone’s database structure is identical
+
+No one shares actual data
+
+Setup is repeatable for markers and CI
+
+4. Clear developer responsibilities
+
+Auth-service developer owns auth tables and migrations
+
+File-service developer owns file tables and migrations
+
+Team members pull each other’s migrations and apply them locally
+
+This avoids conflicts and confusion.
+
+5. Sample users exist for local testing
+
+A script is provided to insert sample users into the auth database.
+
+Passwords are hashed.
+
+The script is safe to re-run and does not duplicate users.
+
+This helps with local development and testing.
+
+File Service — User Dashboard (MVP)
+Overview
+
+The User Dashboard is part of the File Service backend.
+It allows a logged-in user to retrieve a list of only their own uploaded files.
+
+All ownership checks are enforced server-side to prevent data leakage between users.
+This feature is implemented following Test-Driven Development (TDD) principles and is verified using automated backend tests.
+
+Feature Description
+Endpoint
+GET /dashboard
+
+Purpose
+
+Display files uploaded by the authenticated user
+
+Prevent access to files owned by other users
+
+Return an empty list when the user has no files
+
+Security & Access Rules (Acceptance Criteria)
+AC-DASH-01 — Authorised Access
+
+User must be authenticated
+
+Valid request returns HTTP 200
+
+AC-DASH-02 — Unauthorised Access Prevention
+
+If the user is not authenticated:
+
+Access is denied
+
+HTTP 401 Unauthorized is returned
+
+AC-DASH-03 — User Data Isolation (Security Critical)
+
+Only files owned by the authenticated user are returned
+
+Server enforces ownership checks
+
+Client-side manipulation cannot expose other users’ data
+
+Test failure results in pipeline failure
+
+AC-DASH-04 — Empty State Handling
+
+If the user has no uploaded files:
+
+An empty list is returned
+
+No errors occur
+
+Authentication (Local Development)
+
+For local development and testing, authentication is simulated using an HTTP header:
+
+X-User-Id: <user_id>
 
 
-And each DB container maps its data folder to a volume:
+Example:
 
-volumes:
-  - auth_db_data:/var/lib/postgresql/data
+X-User-Id: 1
 
 
-What this means:
+This allows backend logic and security rules to be tested independently of the authentication service.
 
-Your database data is stored in a Docker-managed “storage box” (volume)
+Dashboard Response Format
+Example Response
+{
+  "files": [
+    {
+      "id": 1,
+      "filename": "example.txt",
+      "storage_path": "/files/example.txt",
+      "content_type": "text/plain",
+      "size_bytes": 1234,
+      "created_at": "2026-01-17T12:00:00Z"
+    }
+  ]
+}
 
-If you restart containers (docker compose down then up) your data stays
+Empty State
+{
+  "files": []
+}
 
-You only lose DB data if you deliberately delete volumes:
+Automated Testing (Ownership Isolation)
+What the Test Verifies
 
-✅ Data persists:
+The automated backend test ensures that:
 
-docker compose down
+Multiple users can exist in the database
+
+Each user can have files stored
+
+When the dashboard logic is executed for User A:
+
+Only User A’s files are returned
+
+Files belonging to other users are never returned
+
+This directly validates AC-DASH-03 (Security Critical).
+
+Running the Tests Locally
+Prerequisites (IMPORTANT)
+
+The tests run against a Dockerised PostgreSQL database.
+
+Before running tests, ensure the database containers are running.
+
+From the repository root:
+
 docker compose up -d
 
 
-❌ Data resets (ONLY if you do this):
-
-docker compose down -v
-
-How you use docker-compose.yml (commands)
-
-Run these at repo root:
-
-Start DB containers (background):
-
-docker compose up -d
-
-
-Check what is running:
+Confirm containers are running:
 
 docker ps
 
+Run Tests
 
-Stop containers (data remains because volume stays):
+Once Docker containers are running, execute:
 
-docker compose down
+python -m pytest
 
-2) “your-service” setup (repeat for auth-service / file-service)
+Expected Output
+1 passed
 
-Each service is responsible for:
 
-Its own Flask app
+If the test fails, it indicates a violation of dashboard security or ownership rules.
 
-Its own DB connection
+Test Design Notes
 
-Its own models (tables)
+Tests run against a local Docker database, not production
 
-Its own migrations folder
+Existing database rows are cleared at the start of the test to ensure deterministic results
 
-So you’ll do steps inside your service folder.
+No real user or production data is involved
 
-2.1 Enter your service folder
-
-Example for you (auth-service):
-
-cd auth-service
-
-3) Python dependencies (what to install and why)
-
-Install these in your service folder:
-
-python -m pip install flask flask-sqlalchemy flask-migrate psycopg2-binary
-
-What each package is for
-
-flask → the web server / API routes
-
-flask-sqlalchemy → lets us define tables using Python classes
-
-flask-migrate → adds the flask db ... commands (migration system)
-
-psycopg2-binary → allows Python to connect to PostgreSQL
-
-4) What files you need in each service (and what they do)
-✅ db.py — database “engine” setup
-
-Purpose: Creates the db object that the whole service uses.
-
-Minimal db.py:
-
-from flask_sqlalchemy import SQLAlchemy
-db = SQLAlchemy()
-
-✅ models.py — define your tables here (YOU create your own)
-
-Purpose: This is where you define your database tables (schema) using classes.
-
-Example models.py (just an example — you will create your own tables):
-
-from db import db
-
-class User(db.Model):
-    __tablename__ = "users"
-
-    id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(50), unique=True, nullable=False)
-    password_hash = db.Column(db.Text, nullable=False)
-    role = db.Column(db.String(10), nullable=False, default="user")
-
-
-Important:
-
-You are responsible for your own schema (auth tables)
-
-I am responsible for my own schema (file tables)
-
-We share migrations via Git so both of us can recreate the schema locally
-
-✅ app.py — Flask app + DB connection + migration wiring
-
-Purpose:
-
-Create the Flask app
-
-Connect to your Postgres DB container
-
-Enable migrations (flask db ...)
-
-Minimal migration-ready app.py template:
-
-from flask import Flask
-from flask_migrate import Migrate
-from db import db
-import models  # IMPORTANT: ensures Flask "sees" your table definitions
-
-app = Flask(__name__)
-
-# Change this DB URL depending on service:
-# auth-service connects to auth-db (port 5433)
-# file-service connects to file-db (port 5434)
-app.config["SQLALCHEMY_DATABASE_URI"] = "postgresql+psycopg2://YOUR_USER:YOUR_PASS@localhost:YOUR_PORT/YOUR_DB"
-app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-
-db.init_app(app)
-migrate = Migrate(app, db)
-
-@app.get("/health")
-def health():
-    return {"status": "ok"}
-
-For auth-service DB URL (example)
-"postgresql+psycopg2://auth_user:auth_pass@localhost:5433/auth_db"
-
-For file-service DB URL (example)
-"postgresql+psycopg2://file_user:file_pass@localhost:5434/file_db"
-
-5) Migrations (Option B) — how tables are created
-
-We do not manually create tables in Postgres.
-Instead we use migrations (schema instructions).
-
-5.1 Tell Flask what app to use (Windows PowerShell)
-
-Inside your service folder:
-
-$env:FLASK_APP="app:app"
-
-
-This means:
-
-app = app.py
-
-app = the Flask variable inside it
-
-5.2 Initialize migrations (first time only)
-flask db init
-
-
-Purpose: creates a migrations/ folder automatically.
-
-What’s inside migrations/
-
-configuration files for the migration tool
-
-a versions/ folder where migration scripts are stored
-
-migration scripts are what we commit to Git
-
-6) What you do as the auth-service developer (summary)
-
-docker compose up -d (repo root) — start DBs
-
-cd auth-service
-
-install dependencies
-
-create db.py, models.py, app.py (with auth-db URL)
-
-$env:FLASK_APP="app:app"
-
-flask db init
-
-Next steps after init (we do later):
-
-flask db migrate -m "..." → generate migration script
-
-flask db upgrade → apply migration to create tables
-
-commit migrations/ folder to Git
-
-fter flask db init (Create tables using migrations)
-Preconditions (must be true)
-
-✅ Docker DB containers are running (from repo root):
-
-docker compose up -d
-docker ps
-
-
-You should see your DB container (e.g., file-db or auth-db) Up.
-
-✅ You are in your service folder:
-
-cd your-service
-
-
-✅ You already ran:
-
-flask db init
-
-
-and a migrations/ folder exists.
-
-Step 1 — Make sure Flask can “see” your tables
-Action
-
-Check your app.py contains this line:
-
-import models
-
-Purpose
-
-If Flask doesn’t import models.py, migration autogeneration will say “No changes detected” because it can’t see your table definitions.
-
-Step 2 — Generate a migration file (create schema instructions)
-Action (PowerShell, inside service folder)
-
-Set FLASK_APP:
-
-$env:FLASK_APP="app:app"
-
-
-Then generate migration:
-
-flask db migrate -m "create initial tables"
-
-Purpose
-
-Creates a migration script (instructions) in:
-
-your-service/migrations/versions/<id>_create_initial_tables.py
-
-Expected output (example)
-
-You should see something like:
-
-Detected added table 'users' or Detected added table 'files'
-
-Generating .../versions/<id>_....py ... done
-
-Step 3 — Apply the migration (actually creates tables in Postgres)
-Action
-flask db upgrade
-
-Purpose
-
-Runs the migration script against Postgres to create tables.
-
-Expected output
-
-You should see:
-
-Running upgrade -> <id>, create initial tables
-
-Step 4 — Verify tables exist (proof in the DB)
-Option A: Verify using psql inside the DB container
-For file-service DB
-docker exec -it file-db psql -U file_user -d file_db -c "\dt"
-
-For auth-service DB
-docker exec -it auth-db psql -U auth_user -d auth_db -c "\dt"
-
-Purpose
-
-Lists tables. You should see:
-
-your app table (e.g., files or users)
-
-alembic_version (migration tracking table)
-
-Step 5 — Commit migration files to Git (so teammate can reproduce schema)
-Action (repo root)
-git add your-service/migrations
-git commit -m "Add initial DB schema for your-service"
-git push
-
-Purpose
-
-This shares the schema instructions with the team.
-Other devs/QA/CI can apply the same schema by running:
-
-cd your-service
-$env:FLASK_APP="app:app"
-flask db upgrade
-
-Common issues (fast fixes)
-1) “No changes detected”
-
-✅ Fix:
-
-Ensure import models is in app.py
-
-Ensure your model classes exist in models.py
-Then rerun:
-
-flask db migrate -m "create initial tables"
-
-2) Password / DB does not exist
-
-✅ Fix:
-
-Make sure docker compose up -d is running
-
-Confirm compose env vars are correct (no typos like PSTGRES_DB)
-
-If DB name was wrong earlier, reset the correct volume once:
-
-docker compose down
-docker volume rm <service_volume_name>
-docker compose up -d
-
-One-line summary (what you just did)
-
-✅ migrate generates instructions
-✅ upgrade executes those instructions to create tables
-✅ Commit migrations/ so everyone can recreate the same schema locally
-
-Key rule for teamwork
-
-You create and commit auth-service migrations
-
-I create and commit file-service migrations
-
-We pull and run flask db upgrade to apply each other’s schema locally
-
-We do not share data, only schema
-
-## Sample Users
-How Sample Users Are Added
-
-Run these lines in terminal:(you can create more user also)
-$env:ADMIN_USERNAME="admin"
-$env:ADMIN_PASSWORD="admin123"
-$env:USER_USERNAME="user1"
-$env:USER_PASSWORD="user123"
-python sample_users.py
-** You don't need to run this all the time only if when you create new user **
-
-
-The script will:
-Hash passwords using werkzeug.security.generate_password_hash
-Insert users into the users table
-Skip creation if the user already exists (safe to re-run)
-
-
-Current Sample Users (Local Dev)
-Role	Username	Password
-Admin	admin	admin123
-User	user1	user123
-Passwords are stored as hashes in the database, not in plaintext.
+Test failure will fail the CI pipeline
