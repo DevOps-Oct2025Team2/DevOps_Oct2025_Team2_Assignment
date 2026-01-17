@@ -4,8 +4,10 @@ from flask_migrate import Migrate
 from db import db
 import models
 from routes import auth_routes
+from flask_cors import CORS
 
 app = Flask(__name__)
+CORS(app) 
 
 app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv(
     "DATABASE_URL",
@@ -16,7 +18,7 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 db.init_app(app)
 migrate = Migrate(app, db)
 
-app.register_blueprint(auth_routes)
+app.register_blueprint(auth_routes, url_prefix="/api")
 
 
 @app.get("/health")

@@ -51,7 +51,8 @@ def login():
 
     return jsonify({
         "access_token": token,
-        "token_type": "Bearer"
+        "token_type": "Bearer",
+        "role": user.role
     }), 200
 
 # AUTH MIDDLEWARE
@@ -77,6 +78,15 @@ def token_required(f):
 
     return decorated
 
+def admin_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if request.user["role"] != "admin":
+            return jsonify({"message": "Forbidden"}), 403
+        return f(*args, **kwargs)
+
+    return decorated
+
 # PROTECTED ROUTE (AUTH CHECK)
 @auth_routes.route("/profile", methods=["GET"])
 @token_required
@@ -87,3 +97,12 @@ def profile():
     }), 200
 
 
+@auth_routes.route("/admin", methods=["GET"])
+@token_required
+@admin_required
+def admin_dashboard():
+    return jsonify({"message": "Admin access granted"}), 200
+
+@auth_routes.post("/logout")
+def logout():
+    return jsonify({"message": "Logged out"}), 200
