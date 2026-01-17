@@ -180,30 +180,35 @@ Files belonging to other users are never returned
 
 This directly validates AC-DASH-03 (Security Critical).
 
-Running the Tests Locally
-Prerequisites (IMPORTANT)
+Running the Tests Locally (Unit Tests)
+Important Note
 
-The tests run against a Dockerised PostgreSQL database.
+Unit tests are fully isolated and do not require Docker.
+A temporary in-memory database is created automatically for each test run, so tests are fast and deterministic.
 
-Before running tests, ensure the database containers are running.
+Run Tests (File Service)
 
-From the repository root:
+From inside the file_service/ folder:
 
-docker compose up -d
-
-
-Confirm containers are running:
-
-docker ps
-
-Run Tests
-
-Once Docker containers are running, execute:
-
-python -m pytest
+pytest
 
 Expected Output
 1 passed
+
+
+If the test fails, it indicates a violation of dashboard ownership rules (AC-DASH-03).
+
+Test Design Notes
+
+Tests run using an in-memory database, not PostgreSQL
+
+Each test run creates and destroys its own data automatically
+
+No manual cleanup is needed
+
+No production data is involved
+
+Test failure will fail the CI pipeline
 
 
 If the test fails, it indicates a violation of dashboard security or ownership rules.
@@ -217,3 +222,60 @@ Existing database rows are cleared at the start of the test to ensure determinis
 No real user or production data is involved
 
 Test failure will fail the CI pipeline
+
+
+****** How to test authentication unit testing ******
+## Go inside auth-service folder
+cd auth-service
+
+## Install dependencies
+pip install -r requirements.txt
+
+> This installs:
+> 
+- Flask
+- Flask-SQLAlchemy
+- PyJWT
+- cryptography (required for ES256)
+- pytest
+- psycopg2-binary
+
+## Generate ES256 JWT keys (run ONCE)
+docker run --rm -v${PWD}:/keys alpine/openssl \
+  ecparam -name prime256v1 -genkey -noout -out /keys/ec_private.pem
+
+docker run --rm -v${PWD}:/keys alpine/openssl \
+  ec -in /keys/ec_private.pem -pubout -out /keys/ec_public.pem
+
+
+After this step, you should see inside auth-service folder:
+---
+ec_private.pem
+ec_public.pem
+---
+These files **must NOT be committed** to Git.
+---
+
+## 5️⃣ Set environment variables for JWT keys
+### Windows (PowerShell)
+$env:JWT_PRIVATE_KEY =Get-Content ec_private.pem-Raw
+$env:JWT_PUBLIC_KEY =Get-Content ec_public.pem-Raw
+
+
+## 6️⃣ Run unit tests
+---
+pytest -v
+or 
+pytest - python -m pytest -v
+---
+
+## Expected Output
+========================= test session starts =========================
+collected 7 items
+
+tests/test_auth.py::test_login_success_admin PASSED
+tests/test_auth.py::test_login_success_user PASSED
+tests/test_auth.py::test_login_invalid_credentials PASSED
+tests/test_auth.py::test_login_missing_fields PASSED
+
+==================== 7 passed, warnings in <1s ====================
