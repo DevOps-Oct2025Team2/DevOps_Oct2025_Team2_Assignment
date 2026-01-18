@@ -150,3 +150,47 @@ describe("AC-LOGIN-04 — Unauthenticated Access to Protected Routes", () => {
   });
 
 });
+
+// Test case for unauthorized access by authenticated non-admin user ( AC-AUTH-02 )
+describe("AC-LOGIN-05 — Unauthorized Access by Authenticated Non-Admin User", () => {
+
+  let userToken;
+
+  // Step 1: Login as non-admin user
+  beforeAll(async () => {
+    const loginResponse = await axios.post(
+      "http://127.0.0.1:5000/api/login",
+      {
+        username: "user1",      // non-admin user
+        password: "user123"
+      }
+    );
+
+    userToken = loginResponse.data.access_token;
+  });
+
+  it("should deny access to /admin for authenticated non-admin user", async () => {
+    try {
+      await axios.get(
+        "http://127.0.0.1:5000/api/admin",
+        {
+          headers: {
+            Authorization: `Bearer ${userToken}`
+          }
+        }
+      );
+
+      throw new Error("Non-admin user should not be able to access /admin");
+
+    } catch (error) {
+      const response = error.response;
+
+      // Must be forbidden
+      expect(response.status).toBe(403);
+
+      // No admin content should be returned
+      expect(response.data).toBeDefined();
+    }
+  });
+
+});
