@@ -1,13 +1,29 @@
-# Python cache
+# ======================
+# Python
+# ======================
 __pycache__/
 *.pyc
 
+# ======================
+# Node.js
+# ======================
+node_modules/
+npm-debug.log*
+yarn-error.log*
+
+# ======================
 # Environment files
+# ======================
 .env
 .env.*
+!.env.example
 
+# ======================
 # VS Code
+# ======================
 .vscode/
 
-# JWT private key
+# ======================
+# Security keys
+# ======================
 *.pem
