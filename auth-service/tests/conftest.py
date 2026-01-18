@@ -2,6 +2,11 @@ import os
 import pytest
 
 os.environ["DATABASE_URL"] = "sqlite:///:memory:"
+## For unit testing and CI
+os.environ["JWT_PRIVATE_KEY"] = "test-private-key"
+os.environ["JWT_PUBLIC_KEY"] = "test-public-key"
+os.environ["TESTING"] = "true"
+os.environ["JWT_SECRET"] = "unit-test-secret"
 
 from app import app
 from db import db
