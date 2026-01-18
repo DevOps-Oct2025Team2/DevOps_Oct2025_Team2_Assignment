@@ -6,3 +6,4 @@ PyJWT
 cryptography
 Werkzeug
 pytest
+Flask-CORS
