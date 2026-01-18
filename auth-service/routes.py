@@ -14,13 +14,28 @@ auth_routes = Blueprint("auth_routes", __name__)
 # JWT Configuration (ES256)
 BASE_DIR = Path(__file__).resolve().parent
 
-with open(BASE_DIR / "ec_private.pem", "r") as f:
-    PRIVATE_KEY = f.read()
-
-with open(BASE_DIR / "ec_public.pem", "r") as f:
-    PUBLIC_KEY = f.read()
-
 JWT_EXPIRY_HOURS = 1
+
+TESTING = os.getenv("TESTING") == "true"
+
+if TESTING:
+    # Unit tests: simple symmetric key
+    JWT_ALGORITHM = "HS256"
+    PRIVATE_KEY = os.getenv("JWT_SECRET", "test-secret")
+    PUBLIC_KEY = PRIVATE_KEY
+else:
+    # Production / local dev: ES256 with PEM keys
+    JWT_ALGORITHM = "ES256"
+
+    PRIVATE_KEY = os.getenv("JWT_PRIVATE_KEY")
+    PUBLIC_KEY = os.getenv("JWT_PUBLIC_KEY")
+
+    if not PRIVATE_KEY or not PUBLIC_KEY:
+        BASE_DIR = Path(__file__).resolve().parent
+        with open(BASE_DIR / "ec_private.pem", "r") as f:
+            PRIVATE_KEY = f.read()
+        with open(BASE_DIR / "ec_public.pem", "r") as f:
+            PUBLIC_KEY = f.read()
 
 # LOGIN API (Authentication)
 @auth_routes.route("/login", methods=["POST"])
@@ -47,11 +62,12 @@ def login():
         "exp": datetime.now(UTC) + timedelta(hours=JWT_EXPIRY_HOURS)
     }
 
-    token = jwt.encode(payload, PRIVATE_KEY, algorithm="ES256")
+    token = jwt.encode(payload, PRIVATE_KEY, algorithm=JWT_ALGORITHM)
 
     return jsonify({
         "access_token": token,
-        "token_type": "Bearer"
+        "token_type": "Bearer",
+        "role": user.role
     }), 200
 
 # AUTH MIDDLEWARE
@@ -66,13 +82,22 @@ def token_required(f):
         token = auth_header.split(" ")[1]
 
         try:
-            decoded = jwt.decode(token, PUBLIC_KEY, algorithms=["ES256"])
+            decoded = jwt.decode(token, PUBLIC_KEY, algorithms=[JWT_ALGORITHM])
             request.user = decoded
         except jwt.ExpiredSignatureError:
             return jsonify({"message": "Token expired"}), 401
         except jwt.InvalidTokenError:
             return jsonify({"message": "Invalid token"}), 401
 
+        return f(*args, **kwargs)
+
+    return decorated
+
+def admin_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if request.user["role"] != "admin":
+            return jsonify({"message": "Forbidden"}), 403
         return f(*args, **kwargs)
 
     return decorated
@@ -87,3 +112,12 @@ def profile():
     }), 200
 
 
+@auth_routes.route("/admin", methods=["GET"])
+@token_required
+@admin_required
+def admin_dashboard():
+    return jsonify({"message": "Admin access granted"}), 200
+
+@auth_routes.post("/logout")
+def logout():
+    return jsonify({"message": "Logged out"}), 200

@@ -1,11 +1,18 @@
 import os
-os.environ["DATABASE_URL"] = "sqlite:///:memory:" 
-
 import pytest
+
+os.environ["DATABASE_URL"] = "sqlite:///:memory:"
+## For unit testing and CI
+os.environ["JWT_PRIVATE_KEY"] = "test-private-key"
+os.environ["JWT_PUBLIC_KEY"] = "test-public-key"
+os.environ["TESTING"] = "true"
+os.environ["JWT_SECRET"] = "unit-test-secret"
+
 from app import app
 from db import db
 from models import User
 from werkzeug.security import generate_password_hash
+
 
 @pytest.fixture
 def client():
@@ -26,20 +33,21 @@ def client():
 
 @pytest.fixture
 def test_user():
-    admin = User(
-        username="admin",
-        password_hash=generate_password_hash("admin123"),
-        role="admin"
-    )
+    with app.app_context():
+        admin = User(
+            username="admin",
+            password_hash=generate_password_hash("admin123"),
+            role="admin"
+        )
 
-    user = User(
-        username="user1",
-        password_hash=generate_password_hash("user123"),
-        role="user"
-    )
+        user = User(
+            username="user1",
+            password_hash=generate_password_hash("user123"),
+            role="user"
+        )
 
-    db.session.add_all([admin, user])
-    db.session.commit()
+        db.session.add_all([admin, user])
+        db.session.commit()
 
-    return admin
+        return admin
 
