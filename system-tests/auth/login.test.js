@@ -24,7 +24,6 @@ describe("AC-LOGIN-01 — Successful Login", () => {
   });
 });
 
-
 // Test case for failed login ( AC-LOGIN-02 )
 describe("AC-LOGIN-02 — Failed Login (Invalid Credentials)", () => {
   it("should reject authentication and not issue any token", async () => {
@@ -104,6 +103,49 @@ describe("AC-LOGIN-03 — Input Validation", () => {
       expect(response.status).toBe(401);
       expect(response.data.access_token).toBeUndefined();
       expect(response.data.message || response.data.error).toBeDefined();
+    }
+  });
+
+});
+
+// Test case for unauthenticated access to protected routes ( AC-AUTH-01 )
+describe("AC-LOGIN-04 — Unauthenticated Access to Protected Routes", () => {
+
+  it("should deny access to /api/profile when user is unauthenticated", async () => {
+    try {
+      await axios.get(
+        "http://127.0.0.1:5000/api/profile"
+      );
+
+      throw new Error("Access to /api/profile should be denied for unauthenticated users");
+
+    } catch (error) {
+      const response = error.response;
+
+      // Access must be denied
+      expect([401, 403]).toContain(response.status);
+
+      // No protected data should be returned
+      expect(response.data).toBeDefined();
+    }
+  });
+
+  it("should deny access to /api/admin when user is unauthenticated", async () => {
+    try {
+      await axios.get(
+        "http://127.0.0.1:5000/api/admin"
+      );
+
+      throw new Error("Access to /api/admin should be denied for unauthenticated users");
+
+    } catch (error) {
+      const response = error.response;
+
+      // Access must be denied
+      expect([401, 403]).toContain(response.status);
+
+      // No protected data should be returned
+      expect(response.data).toBeDefined();
     }
   });
 
