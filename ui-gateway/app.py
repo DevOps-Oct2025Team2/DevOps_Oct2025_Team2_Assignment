@@ -10,5 +10,9 @@ def home():
 def login_page():
     return render_template("login.html")
 
+@app.route("/admin")
+def admin_page():
+    return render_template("admin.html")
+
 if __name__ == "__main__":
     app.run(port=3000, debug=True)
