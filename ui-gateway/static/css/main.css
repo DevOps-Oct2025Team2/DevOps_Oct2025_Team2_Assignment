@@ -4,8 +4,13 @@
 }
 
 body {
-  height: 100vh;
+  min-height: 100vh;
   background: #f4f6f8;
+  margin: 0;
+}
+
+.login-page {
+  height: 100vh;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -59,4 +64,126 @@ button:hover {
   margin-top: 10px;
   text-align: center;
   font-size: 14px;
+}
+
+.admin-wrapper {
+  padding: 40px;
+}
+
+.admin-header {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  margin-bottom: 30px;
+}
+
+.admin-header h1 {
+  grid-column: 2;
+  text-align: center;
+  margin: 0;
+}
+
+
+.admin-container {
+  display: flex;
+  gap: 30px;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+.admin-card {
+  background: #fff;
+  padding: 25px;
+  width: 340px;
+  border-radius: 10px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+}
+
+.admin-card h3 {
+  margin-top: 0;
+  margin-bottom: 20px;
+}
+
+.admin-card label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+
+.admin-card input {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 16px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+}
+
+.admin-card button {
+  width: 100%;
+  padding: 12px;
+  background: #0d6efd;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.admin-card button:hover {
+  background: #084cdf;
+}
+
+.logout-btn {
+  grid-column: 3;
+  justify-self: end;
+  background: #dc3545;
+  border: none;
+  color: white;
+  padding: 10px 18px;
+  border-radius: 6px;
+  cursor: pointer;
+  width: auto;
+}
+
+.logout-btn:hover {
+  background: #b02a37;
+}
+
+.danger-btn {
+  background: #dc3545;
+  border: none;
+  color: white;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.danger-btn:hover {
+  background: #b02a37;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th, td {
+  padding: 10px;
+  border-bottom: 1px solid #ddd;
+  text-align: left;
+}
+
+th {
+  background: #f1f3f5;
+}
+
+.info-text {
+  margin-top: 12px;
+  font-size: 13px;
+  color: #666;
+  text-align: center;
+}
+
+.admin-card button,
+.login-container button {
+  width: 100%;
 }

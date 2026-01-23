@@ -1,5 +1,61 @@
-## Unauthorized Access Prevention and logout for later implementation
-<script src="/static/js/utils/authGuard.js"></script>
-<script src="/static/js/pages/admin.js"></script>
-<script src="/static/js/utils/logout.js"></script>
-<button onclick="logout()">Logout</button>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Admin Dashboard</title>
+  <link rel="stylesheet" href="/static/css/main.css" />
+</head>
+<body>
+
+  <div class="admin-wrapper">
+
+    <header class="admin-header">
+      <h1>Admin Dashboard</h1>
+      <button class="logout-btn" onclick="logout()">Logout</button>
+    </header>
+
+    <div class="admin-container">
+
+      <div class="admin-card">
+        <h3>Add New User</h3>
+
+        <label>Username</label>
+        <input type="text" id="username" placeholder="Enter username" />
+
+        <label>Password</label>
+        <input type="password" id="password" placeholder="Enter password" />
+
+        <button onclick="addUser()">Add User</button>
+      </div>
+
+      <div class="admin-card">
+        <h3>All Users</h3>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Username</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="usersTable">
+          </tbody>
+        </table>
+
+        <p class="info-text">
+          Admin accounts are protected and cannot be modified.
+        </p>
+      </div>
+
+    </div>
+  </div>
+
+  <script src="/static/js/utils/authGuard.js"></script>
+  <script src="/static/js/pages/admin.js"></script>
+  <script src="/static/js/utils/logout.js"></script>
+
+</body>
+</html>
+
+
+
