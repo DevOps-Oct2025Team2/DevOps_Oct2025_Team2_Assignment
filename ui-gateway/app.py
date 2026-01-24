@@ -10,5 +10,9 @@ def home():
 def login_page():
     return render_template("login.html")
 
+@app.route("/dashboard", methods=["GET"])
+def dashboard_page():
+    return render_template("dashboard.html")
+
 if __name__ == "__main__":
     app.run(port=3000, debug=True)

@@ -1,10 +1,12 @@
 from flask import Flask
 from flask_migrate import Migrate
 from db import db
+from flask_cors import CORS
 import models
 
 def create_app(database_uri=None):
     app = Flask(__name__)
+    CORS(app, resources={r"/*": {"origins": "http://localhost:3000"}})
 
     if database_uri is None:
         database_uri = "postgresql+psycopg2://file_user:file_pass@localhost:5434/file_db"
@@ -14,7 +16,7 @@ def create_app(database_uri=None):
     app.config["TESTING"] = True
 
     app.config["UPLOAD_DIR"] = "uploads"
-    app.config["MAX_UPLOAD_SIZE_BYTES"] = 5 * 1024 * 1024
+    app.config["MAX_UPLOAD_SIZE_BYTES"] = 1000 #5 * 1024 * 1024
     app.config["ALLOWED_CONENT_TYPES"] = {"text/plain", "image/png"}
 
     db.init_app(app)

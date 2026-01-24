@@ -59,15 +59,19 @@ def upload_dashboard_file():
     max_size = current_app.config["MAX_UPLOAD_SIZE_BYTES"]
     allowed_types = current_app.config.get("ALLOWED_CONTENT_TYPES")
 
-    # Call Business logic
-    saved = save_upload_for_user(
-        user_id=int(user_id),
-        file_storage=file_storage,
-        upload_dir=upload_dir,
-        max_size=max_size,
-        allowed_types=allowed_types,
-    )
-
+    try:
+         # Call Business logic
+        saved = save_upload_for_user(
+            user_id=int(user_id),
+            file_storage=file_storage,
+            upload_dir=upload_dir,
+            max_size=max_size,
+            allowed_types=allowed_types,
+        )
+    except ValueError as e:
+        # AC-FILE-02: reject invalid upload, no persistence
+        return jsonify({"error": str(e)}), 400
+    
     # Return response json
     return jsonify({
         "file" : {
