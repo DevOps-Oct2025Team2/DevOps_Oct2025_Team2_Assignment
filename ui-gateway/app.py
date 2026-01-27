@@ -10,6 +10,10 @@ def home():
 def login_page():
     return render_template("login.html")
 
+@app.route("/admin")
+def admin_page():
+    return render_template("admin.html")
+
 @app.route("/dashboard", methods=["GET"])
 def dashboard_page():
     return render_template("dashboard.html")

@@ -132,3 +132,89 @@ def test_login_invalid_json_body(client):
 
     assert response.status_code == 400
 
+# AC-ADMIN-01 — Create User Account (Admin)
+def test_admin_create_user_success(client, test_user):
+    login_res = client.post("/api/login", json={
+        "username": "admin",
+        "password": "admin123"
+    })
+    token = login_res.get_json()["access_token"]
+
+    res = client.post(
+        "/api/admin/users",
+        json={
+            "username": "newuser",
+            "password": "newpass"
+        },
+        headers={"Authorization": f"Bearer {token}"}
+    )
+
+    assert res.status_code == 201
+
+# AC-ADMIN-01 — Prevent Duplicate User Creation
+def test_admin_create_user_duplicate(client, test_user):
+    login_res = client.post("/api/login", json={
+        "username": "admin",
+        "password": "admin123"
+    })
+    token = login_res.get_json()["access_token"]
+
+    res = client.post(
+        "/api/admin/users",
+        json={
+            "username": "user1",
+            "password": "pass"
+        },
+        headers={"Authorization": f"Bearer {token}"}
+    )
+
+    assert res.status_code == 400
+
+# AC-ADMIN-02 — Delete User Account (Admin)
+def test_admin_delete_user_success(client, test_user):
+    login_res = client.post("/api/login", json={
+        "username": "admin",
+        "password": "admin123"
+    })
+    token = login_res.get_json()["access_token"]
+
+    res = client.delete(
+        "/api/admin/users/2",
+        headers={"Authorization": f"Bearer {token}"}
+    )
+
+    assert res.status_code == 200
+
+# AC-ADMIN-02 — Prevent Admin Account Deletion
+def test_admin_cannot_delete_self(client, test_user):
+    login_res = client.post("/api/login", json={
+        "username": "admin",
+        "password": "admin123"
+    })
+    token = login_res.get_json()["access_token"]
+
+    res = client.delete(
+        "/api/admin/users/1",
+        headers={"Authorization": f"Bearer {token}"}
+    )
+
+    assert res.status_code == 403
+
+# AC-ADMIN-01 — Non-Admin Cannot Create User
+def test_non_admin_cannot_create_user(client, test_user):
+    login_res = client.post("/api/login", json={
+        "username": "user1",
+        "password": "user123"
+    })
+    token = login_res.get_json()["access_token"]
+
+    res = client.post(
+        "/api/admin/users",
+        json={
+            "username": "hacker",
+            "password": "hackpass"
+        },
+        headers={"Authorization": f"Bearer {token}"}
+    )
+
+    assert res.status_code == 403
