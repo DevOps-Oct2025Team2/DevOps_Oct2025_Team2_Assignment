@@ -22,7 +22,7 @@ def create_app(database_uri=None):
     app.config["TESTING"] = True
 
     app.config["UPLOAD_DIR"] = "uploads"
-    app.config["MAX_UPLOAD_SIZE_BYTES"] = 1000 #5 * 1024 * 1024
+    app.config["MAX_UPLOAD_SIZE_BYTES"] = 5 * 1024 * 1024
     app.config["ALLOWED_CONENT_TYPES"] = {"text/plain", "image/png"}
 
     db.init_app(app)
