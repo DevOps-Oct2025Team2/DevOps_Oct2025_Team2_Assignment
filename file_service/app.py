@@ -6,7 +6,13 @@ import models
 
 def create_app(database_uri=None):
     app = Flask(__name__)
-    CORS(app, resources={r"/*": {"origins": "http://localhost:3000"}})
+    CORS(
+        app,
+        origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+        allow_headers=["Content-Type", "X-User-Id", "Authorization"],
+        methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        supports_credentials=False,
+    )
 
     if database_uri is None:
         database_uri = "postgresql+psycopg2://file_user:file_pass@localhost:5434/file_db"
@@ -16,7 +22,7 @@ def create_app(database_uri=None):
     app.config["TESTING"] = True
 
     app.config["UPLOAD_DIR"] = "uploads"
-    app.config["MAX_UPLOAD_SIZE_BYTES"] = 1000 #5 * 1024 * 1024
+    app.config["MAX_UPLOAD_SIZE_BYTES"] = 5 * 1024 * 1024
     app.config["ALLOWED_CONENT_TYPES"] = {"text/plain", "image/png"}
 
     db.init_app(app)
@@ -34,4 +40,4 @@ def create_app(database_uri=None):
 app = create_app()
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    app.run(host="0.0.0.0", port=5002, debug=True)

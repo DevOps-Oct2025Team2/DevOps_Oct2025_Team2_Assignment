@@ -1,6 +1,7 @@
-from flask import Blueprint, request, jsonify
+import os
+from flask import Blueprint, request, jsonify, send_file
 from models import File
-from dashboard import get_files_for_user
+from dashboard import get_files_for_user, delete_file_for_user, get_file_for_download
 from flask import current_app #The Flask app that is handling this request right now
 from upload import save_upload_for_user
 
@@ -83,3 +84,36 @@ def upload_dashboard_file():
             "created_at": saved.created_at.isoformat(),
         }
     }), 201
+
+@bp.post("/dashboard/delete/<int:file_id>")
+def delete_file(file_id: int):
+    user_id = request.headers.get("X-User-Id")
+    if not user_id or not user_id.isdigit():
+        return jsonify({"error": "Unauthorised"}), 401
+    
+    ok = delete_file_for_user(int(user_id), file_id)
+    if not ok:
+        return jsonify({"error": "Not found"}), 404
+    
+    return jsonify({"message":"File deleted successfully"}), 200
+
+@bp.get("/dashboard/download/<int:file_id>")
+def download_file(file_id: int):
+    user_id = request.headers.get("X-User-Id")
+    if not user_id or not user_id.isdigit():
+        return jsonify({"error": "Unauthorised"}), 401
+    
+    f = get_file_for_download(int(user_id), file_id)
+    if not f:
+        return jsonify({"error": "Not found"}), 404
+    
+    # If record exists but file missing on dusk -> treat as not found
+    if not f.storage_path or not os.path.exists(f.storage_path):
+        return jsonify({"error": "Not found"}), 404
+    
+    return send_file(
+        f.storage_path,
+        as_attachment=True,
+        download_name=f.filename,
+        mimetype=f.content_type
+    )

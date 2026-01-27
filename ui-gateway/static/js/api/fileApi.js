@@ -2,7 +2,7 @@
 // Later replace this with real JWT decoding / login integration.
 
 // Base URL for file_service in local dev mode. If later run docker-compose and map ports, change this One line
-const FILE_SERVICE_BASE = "http://localhost:5000";
+const FILE_SERVICE_BASE = "http://localhost:5002";
 
 // Temporary helper to get user id, in real auth need to decode JWT
 function getUserIdForDev(){
