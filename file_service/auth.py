@@ -3,7 +3,7 @@ import jwt
 from jwt.exceptions import PyJWTError
 
 def get_authenticated_user_id(request):
-    auth = request.headers.get("Authorisation", "")
+    auth = request.headers.get("Authorization", "")
     if not auth.startswith("Bearer "):
         return None
 

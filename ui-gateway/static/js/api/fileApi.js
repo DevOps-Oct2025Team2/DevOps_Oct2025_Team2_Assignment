@@ -17,7 +17,7 @@ function buildAuthHeaders(extraHeaders = {}){
     }
 
     return{
-        "Authorisation" : `Bearer ${token}`,
+        "Authorization" : `Bearer ${token}`,
         ...extraHeaders,
     };
 }
