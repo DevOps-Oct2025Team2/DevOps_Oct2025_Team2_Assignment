@@ -22,6 +22,7 @@ def test_upload_route_success_returns_201_and_json(app, client, tmp_path):
         "file" : (BytesIO(b"hello world"), "a.txt")
     }
 
+    token = make_test_jwt(user_id=1)
     # Call route
     resp = client.post(
         "/dashboard/upload",
