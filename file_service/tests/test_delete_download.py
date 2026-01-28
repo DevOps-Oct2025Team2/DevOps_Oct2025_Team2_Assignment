@@ -1,6 +1,7 @@
 import os
 from models import File
 from db import db
+from conftest import make_test_jwt
 
 def _seed_file(app, owner_id: int, filename="a.txt", content=b"hello", content_type="text/plain"):
     """
@@ -30,14 +31,15 @@ def test_delete_owned_file_success(client, app):
     with app.app_context():
         file_id, storage_path, _, _ = _seed_file(app, owner_id=1, filename="del.txt", content=b"bye")
 
-    resp = client.post(f"/dashboard/delete/{file_id}", headers={"X-User-Id": "1"})
+    token = make_test_jwt(user_id=1)
+    resp = client.post(f"/dashboard/delete/{file_id}", headers={"Authorization": f"Bearer {token}"})
     assert resp.status_code == 200
     assert "deleted" in resp.get_json()["message"].lower()
 
     # file removed from disk + db
     with app.app_context():
         assert File.query.get(file_id) is None
-        assert not os.path.exists(storage_path)
+    assert not os.path.exists(storage_path)
 
 def test_delete_missing_auth_returns_401(client, app):
     with app.app_context():
@@ -50,7 +52,8 @@ def test_delete_not_owned_returns_404(client, app):
     with app.app_context():
         file_id, _, filename, content  = _seed_file(app, owner_id=1)
 
-    resp = client.post(f"/dashboard/delete/{file_id}", headers={"X-User-Id": "2"})
+    token = make_test_jwt(user_id=2)
+    resp = client.post(f"/dashboard/delete/{file_id}", headers={"Authorization": f"Bearer {token}"})
     assert resp.status_code == 404
 
 # ---- Download route test ----
@@ -58,7 +61,8 @@ def test_download_own_file_success(client, app):
     with app.app_context():
         file_id, _, filename, content = _seed_file(app, owner_id=1, filename="dl.txt", content=b"abc123")
 
-    resp = client.get(f"/dashboard/download/{file_id}", headers={"X-User-Id": "1"})
+    token = make_test_jwt(user_id=1)
+    resp = client.get(f"/dashboard/download/{file_id}", headers={"Authorization": f"Bearer {token}"})
     assert resp.status_code == 200
 
     # content matches
@@ -80,7 +84,8 @@ def test_download_not_owned_returns_404(client, app):
     with app.app_context():
         file_id, _, filename, content  = _seed_file(app, owner_id=2)
 
-    resp = client.get(f"/dashboard/download/{file_id}", headers={"X-User-Id": "1"})
+    token = make_test_jwt(user_id=1)
+    resp = client.get(f"/dashboard/download/{file_id}", headers={"Authorization": f"Bearer {token}"})
     assert resp.status_code == 404
 
 
@@ -88,10 +93,11 @@ def test_download_after_delete_returns_404(client, app):
     with app.app_context():
         file_id, _, filename, content  = _seed_file(app, owner_id=1,filename="gone.txt",content=b"gone")
 
+    token = make_test_jwt(user_id=1)
     # delete
-    del_resp = client.post(f"/dashboard/delete/{file_id}", headers={"X-User-Id":"1"})
+    del_resp = client.post(f"/dashboard/delete/{file_id}", headers={"Authorization": f"Bearer {token}"})
     assert del_resp.status_code == 200
 
     # download should fail
-    dl_resp = client.get(f"/dashboard/download/{file_id}", headers={"X-User-Id":"1"})
+    dl_resp = client.get(f"/dashboard/download/{file_id}", headers={"Authorization": f"Bearer {token}"})
     assert dl_resp.status_code == 404

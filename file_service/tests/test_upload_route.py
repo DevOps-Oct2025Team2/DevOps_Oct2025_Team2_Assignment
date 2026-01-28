@@ -1,11 +1,13 @@
 from io import BytesIO # BytesIO (a fake file that lives in memory)
+from conftest import make_test_jwt
 
 def test_upload_route_unauthorised_returns_401(client):
     resp = client.post("/dashboard/upload")
     assert resp.status_code == 401
 
 def test_upload_route_missing_file_returns_400(client):
-    resp = client.post("/dashboard/upload", headers={"X-User-Id": "1"})
+    token = make_test_jwt(user_id=1)
+    resp = client.post("/dashboard/upload", headers={"Authorization": f"Bearer {token}"})
     assert resp.status_code == 400
 
 def test_upload_route_success_returns_201_and_json(app, client, tmp_path):
@@ -20,11 +22,12 @@ def test_upload_route_success_returns_201_and_json(app, client, tmp_path):
         "file" : (BytesIO(b"hello world"), "a.txt")
     }
 
+    token = make_test_jwt(user_id=1)
     # Call route
     resp = client.post(
         "/dashboard/upload",
         data=data,
-        headers={"X-User-Id": "1"},
+        headers={"Authorization": f"Bearer {token}"},
         content_type="multipart/form-data",
     )
 
