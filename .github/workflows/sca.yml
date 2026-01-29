@@ -24,10 +24,10 @@ jobs:
           path: "."
           format: "HTML"
           out: "dependency-check-report"
-          failOnCVSS: "7"
+          args: "--failOnCVSS 7"
 
       - name: Upload SCA report
         uses: actions/upload-artifact@v4
         with:
           name: SCA-Dependency-Report
-          path: dependency-check-report
+          path: dependency-check-report/**
