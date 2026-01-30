@@ -187,3 +187,11 @@ th {
 .login-container button {
   width: 100%;
 }
+
+.hint-text {
+  display: block;
+  margin-top: 6px;
+  margin-bottom: 12px;
+  font-size: 12px;
+  color: #666;
+}

@@ -20,11 +20,6 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    if (username.length < 3 || password.length < 6) {
-      errorText.textContent = "Invalid username or password format";
-      return;
-    }
-
     try {
       const response = await fetch("http://127.0.0.1:5000/api/login", {
         method: "POST",
