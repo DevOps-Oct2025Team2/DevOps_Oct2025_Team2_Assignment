@@ -319,10 +319,144 @@ This allows tests to run safely in:
 
 ## 🧩 Design Notes
 
-* Tests are true unit tests
-* No filesystem access required
-* No secrets committed to Git
-* No production credentials used
-* Any test failure blocks the CI pipeline
+- Tests are true unit tests
+- No filesystem access is required
+- No secrets are committed to Git
+- No production credentials are used
+- Test failures will fail the CI pipeline
+
+# 📂 File Service – User Dashboard & File Upload
+
+This service provides backend APIs for:
+- Viewing a user’s uploaded files (`GET /dashboard`)
+- Uploading a new file (`POST /dashboard/upload`)
+
+The service enforces **user data isolation**, **upload validation**, and **server-side ownership checks**.
 
 ---
+
+## 🚀 How to Run (Local Development)
+
+### 1. Start required services
+From the project root:
+
+```bash
+docker-compose up -d
+This starts:
+
+file-db (PostgreSQL on port 5434)
+
+auth-db (PostgreSQL on port 5433)
+
+2. Install Python dependencies
+cd file_service
+pip install -r requirements.txt
+⚠️ Ensure flask-cors is installed (already included in requirements.txt).
+
+3. Run database migrations
+python -m flask db upgrade
+4. Start the File Service
+python app.py
+The service runs on:
+
+http://localhost:5000
+🔍 Health Check
+Open in browser:
+
+http://localhost:5000/health
+Expected response:
+
+{ "status": "ok" }
+📄 API: View Dashboard Files
+Endpoint
+GET /dashboard
+Required Header
+X-User-Id: <number>
+Example:
+
+X-User-Id: 1
+How to Test (curl)
+curl -H "X-User-Id: 1" http://localhost:5000/dashboard
+Expected Results
+✅ Authenticated user
+
+{
+  "files": []
+}
+(Empty list means no uploaded files)
+
+❌ Unauthenticated / invalid user
+
+HTTP 401 Unauthorized
+
+📤 API: Upload File
+Endpoint
+POST /dashboard/upload
+Required Header
+X-User-Id: <number>
+Request Type
+multipart/form-data
+Field Name
+file
+How to Test (UI – Recommended)
+Start UI Gateway:
+
+cd ui-gateway
+python app.py
+Open browser:
+
+http://localhost:3000
+Login (development mode)
+
+Upload a file from the dashboard page
+
+Upload Rules
+Only allowed file types are accepted
+
+File size must be within configured limits
+
+Validation is enforced server-side
+
+Expected Results
+✅ Valid file
+
+HTTP 201 Created
+
+File is stored
+
+File appears in dashboard
+
+❌ Invalid file (e.g. mp4 / too large)
+
+HTTP 400 Bad Request
+
+{
+  "error": "The uploaded file does not meet the upload requirements."
+}
+No file is stored
+
+🔐 Security Guarantees
+Users can only access their own files
+
+Ownership checks are enforced server-side
+
+Client-side manipulation cannot expose other users’ data
+
+🧪 Running Tests
+pytest
+Tests are fully isolated
+
+Uses in-memory SQLite
+
+No Docker required for unit tests
+
+
+Ok convert it into readme.md so i can copy code please
+
+
+### 🔐 JWT Security
+
+This project uses JSON Web Tokens (JWT) for authentication and authorization across services.
+- **Production & Runtime:** Uses **ES256**, an elliptic-curve–based asymmetric algorithm. Tokens are signed by the auth service using a private key and verified by other services using a public key, providing strong security and preventing token forgery.
+- **Testing & CI:** Uses **HS256** to simplify setup and ensure fast, reliable automated testing.
+This design balances strong production security with efficient local development and CI pipelines.

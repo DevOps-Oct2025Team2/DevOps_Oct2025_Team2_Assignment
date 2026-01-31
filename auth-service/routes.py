@@ -5,37 +5,38 @@ import jwt
 from datetime import datetime, timedelta, UTC
 from flask import Blueprint, request, jsonify
 from werkzeug.security import check_password_hash
+from werkzeug.security import generate_password_hash
+from db import db
 from models import User
 from pathlib import Path
 
 # Blueprint
 auth_routes = Blueprint("auth_routes", __name__)
 
-# JWT Configuration (ES256)
+# ===== JWT CONFIG =====
 BASE_DIR = Path(__file__).resolve().parent
-
 JWT_EXPIRY_HOURS = 1
 
-TESTING = os.getenv("TESTING") == "true"
+IS_TEST = (
+    os.getenv("TESTING") == "true"
+    or os.getenv("CI") == "true"
+)
 
-if TESTING:
-    # Unit tests: simple symmetric key
+if IS_TEST:
+    # CI / pytest
     JWT_ALGORITHM = "HS256"
-    PRIVATE_KEY = os.getenv("JWT_SECRET", "test-secret")
+    PRIVATE_KEY = os.getenv("JWT_SECRET", "unit-test-secret")
     PUBLIC_KEY = PRIVATE_KEY
 else:
-    # Production / local dev: ES256 with PEM keys
+    # Local dev / production
     JWT_ALGORITHM = "ES256"
 
-    PRIVATE_KEY = os.getenv("JWT_PRIVATE_KEY")
-    PUBLIC_KEY = os.getenv("JWT_PUBLIC_KEY")
+    with open(BASE_DIR / "ec_private.pem", "r") as f:
+        PRIVATE_KEY = f.read()
 
-    if not PRIVATE_KEY or not PUBLIC_KEY:
-        BASE_DIR = Path(__file__).resolve().parent
-        with open(BASE_DIR / "ec_private.pem", "r") as f:
-            PRIVATE_KEY = f.read()
-        with open(BASE_DIR / "ec_public.pem", "r") as f:
-            PUBLIC_KEY = f.read()
+    with open(BASE_DIR / "ec_public.pem", "r") as f:
+        PUBLIC_KEY = f.read()
+
 
 # LOGIN API (Authentication)
 @auth_routes.route("/login", methods=["POST"])
@@ -57,7 +58,7 @@ def login():
         return jsonify({"message": "Invalid credentials"}), 401
 
     payload = {
-        "user_id": user.id,
+        "sub": str(user.id),   
         "role": user.role,
         "exp": datetime.now(UTC) + timedelta(hours=JWT_EXPIRY_HOURS)
     }
@@ -121,3 +122,67 @@ def admin_dashboard():
 @auth_routes.post("/logout")
 def logout():
     return jsonify({"message": "Logged out"}), 200
+
+@auth_routes.route("/admin/users", methods=["GET"])
+@token_required
+@admin_required
+def get_all_users():
+    users = User.query.all()
+
+    return jsonify([
+        {
+            "id": u.id,
+            "username": u.username,
+            "role": u.role,
+            "created_at": u.created_at.isoformat()
+        }
+        for u in users
+    ]), 200
+
+@auth_routes.route("/admin/users", methods=["POST"])
+@token_required
+@admin_required
+def create_user():
+    data = request.get_json()
+
+    if not data:
+        return jsonify({"message": "Invalid JSON body"}), 400
+
+    username = data.get("username")
+    password = data.get("password")
+
+    if not username or not password:
+        return jsonify({"message": "Username and password required"}), 400
+
+    # Prevent duplicate usernames
+    if User.query.filter_by(username=username).first():
+        return jsonify({"message": "Username already exists"}), 400
+
+    new_user = User(
+        username=username,
+        password_hash=generate_password_hash(password),
+        role="user"  # FIXED ROLE
+    )
+
+    db.session.add(new_user)
+    db.session.commit()
+
+    return jsonify({"message": "User created successfully"}), 201
+
+@auth_routes.route("/admin/users/<int:user_id>", methods=["DELETE"])
+@token_required
+@admin_required
+def delete_user(user_id):
+    user = User.query.get(user_id)
+
+    if not user:
+        return jsonify({"message": "User not found"}), 404
+
+    # Prevent admin from deleting themselves
+    if str(user.id) == request.user["sub"]:
+        return jsonify({"message": "Cannot delete your own account"}), 403
+
+    db.session.delete(user)
+    db.session.commit()
+
+    return jsonify({"message": "User deleted successfully"}), 200
