@@ -86,3 +86,38 @@ jobs:
             - name: Build file_service image
               run: docker build -t file-service:ci ./file_service
 
+    scan-docker-images:
+        name: Scan Docker Images (Trivy)
+        runs-on: ubuntu-latest
+        needs: build-docker
+
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+            - name: Set up Docker
+              uses: docker/setup-buildx-action@v3
+
+            - name: Build auth-service image for scan
+              run: docker build -t auth-service:ci ./auth-service
+
+            - name: Build file-service image for scan
+              run: docker build -t file-service:ci ./file_service
+
+            - name: Scan auth-service image
+              uses: aquasecurity/trivy-action@0.20.0
+              with:
+                image-ref: auth-service:ci
+                severity: HIGH,CRITICAL
+                exit-code: 1
+                format: table
+                trivyignores: .trivyignore
+
+            - name: Scan file-service image
+              uses: aquasecurity/trivy-action@0.20.0
+              with:
+                image-ref: file-service:ci
+                severity: HIGH,CRITICAL
+                exit-code: 1
+                format: table
+                trivyignores: .trivyignore
