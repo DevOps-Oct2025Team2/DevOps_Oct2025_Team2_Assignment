@@ -58,7 +58,7 @@ def login():
         return jsonify({"message": "Invalid credentials"}), 401
 
     payload = {
-        "user_id": user.id,
+        "sub": str(user.id),   
         "role": user.role,
         "exp": datetime.now(UTC) + timedelta(hours=JWT_EXPIRY_HOURS)
     }
@@ -179,7 +179,7 @@ def delete_user(user_id):
         return jsonify({"message": "User not found"}), 404
 
     # Prevent admin from deleting themselves
-    if user.id == request.user["user_id"]:
+    if str(user.id) == request.user["sub"]:
         return jsonify({"message": "Cannot delete your own account"}), 403
 
     db.session.delete(user)
