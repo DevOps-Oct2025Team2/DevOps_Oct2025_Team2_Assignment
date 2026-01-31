@@ -4,14 +4,20 @@ from app import create_app
 from db import db
 import jwt
 from datetime import datetime, timedelta, UTC
+from pathlib import Path
 
-def make_test_jwt(user_id=1, role="user", secret="test-secret"):
+@pytest.fixture(autouse=True)
+def set_testing_env():
+    os.environ["TESTING"] = "true"
+    os.environ["JWT_SECRET"] = "test-secret"
+
+def make_test_jwt(user_id=1, role="user"):
     payload = {
         "user_id": user_id,
         "role": role,
         "exp": datetime.now(UTC) + timedelta(minutes=5),
     }
-    return jwt.encode(payload, secret, algorithm="HS256")
+    return jwt.encode(payload, "test-secret", algorithm="HS256")
 
 @pytest.fixture(autouse=True)
 def set_testing_env():

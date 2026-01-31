@@ -13,31 +13,30 @@ from pathlib import Path
 # Blueprint
 auth_routes = Blueprint("auth_routes", __name__)
 
-# JWT Configuration (ES256)
+# ===== JWT CONFIG =====
 BASE_DIR = Path(__file__).resolve().parent
-
 JWT_EXPIRY_HOURS = 1
 
-TESTING = os.getenv("TESTING") == "true"
+IS_TEST = (
+    os.getenv("TESTING") == "true"
+    or os.getenv("CI") == "true"
+)
 
-if TESTING:
-    # Unit tests: simple symmetric key
+if IS_TEST:
+    # CI / pytest
     JWT_ALGORITHM = "HS256"
-    PRIVATE_KEY = os.getenv("JWT_SECRET", "test-secret")
+    PRIVATE_KEY = os.getenv("JWT_SECRET", "unit-test-secret")
     PUBLIC_KEY = PRIVATE_KEY
 else:
-    # Production / local dev: ES256 with PEM keys
+    # Local dev / production
     JWT_ALGORITHM = "ES256"
 
-    PRIVATE_KEY = os.getenv("JWT_PRIVATE_KEY")
-    PUBLIC_KEY = os.getenv("JWT_PUBLIC_KEY")
+    with open(BASE_DIR / "ec_private.pem", "r") as f:
+        PRIVATE_KEY = f.read()
 
-    if not PRIVATE_KEY or not PUBLIC_KEY:
-        BASE_DIR = Path(__file__).resolve().parent
-        with open(BASE_DIR / "ec_private.pem", "r") as f:
-            PRIVATE_KEY = f.read()
-        with open(BASE_DIR / "ec_public.pem", "r") as f:
-            PUBLIC_KEY = f.read()
+    with open(BASE_DIR / "ec_public.pem", "r") as f:
+        PUBLIC_KEY = f.read()
+
 
 # LOGIN API (Authentication)
 @auth_routes.route("/login", methods=["POST"])

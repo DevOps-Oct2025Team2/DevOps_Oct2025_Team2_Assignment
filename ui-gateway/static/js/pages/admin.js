@@ -49,6 +49,26 @@ function addUser() {
     return;
   }
 
+  if (username.length < 3) {
+    alert("Username must be at least 3 characters");
+    return;
+  }
+
+ // Strong password rule
+  const strongPasswordRegex =
+    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+
+  if (!strongPasswordRegex.test(password)) {
+    alert(
+      "Password must be at least 8 characters and include:\n" +
+      "- Uppercase letter\n" +
+      "- Lowercase letter\n" +
+      "- Number\n" +
+      "- Special character"
+    );
+    return;
+  }
+
   fetch("http://localhost:5000/api/admin/users", {
     method: "POST",
     headers: {

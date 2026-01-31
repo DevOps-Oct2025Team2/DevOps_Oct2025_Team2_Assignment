@@ -20,14 +20,20 @@ def get_authenticated_user_id(request):
         options = {"require": ["exp"]}
     else:
         alg = "ES256"
-        key = os.getenv("JWT_PUBLIC_KEY")
-        if not key:
+        BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+        PUBLIC_KEY_PATH = os.path.join(BASE_DIR, "ec_public.pem")
+        try:
+            with open(PUBLIC_KEY_PATH, "rb") as f:
+                key = f.read()
+        except FileNotFoundError:
+            print("ec_public.pem not found")
             return None
         options = {"require": ["exp"]}
 
     try:
         payload = jwt.decode(token, key, algorithms=[alg], options=options)
-    except PyJWTError:
+    except PyJWTError as e:
+        print("JWT decode failed:", e)
         return None
 
     user_id = payload.get("user_id")

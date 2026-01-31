@@ -452,3 +452,11 @@ No Docker required for unit tests
 
 
 Ok convert it into readme.md so i can copy code please
+
+
+### 🔐 JWT Security
+
+This project uses JSON Web Tokens (JWT) for authentication and authorization across services.
+- **Production & Runtime:** Uses **ES256**, an elliptic-curve–based asymmetric algorithm. Tokens are signed by the auth service using a private key and verified by other services using a public key, providing strong security and preventing token forgery.
+- **Testing & CI:** Uses **HS256** to simplify setup and ensure fast, reliable automated testing.
+This design balances strong production security with efficient local development and CI pipelines.
