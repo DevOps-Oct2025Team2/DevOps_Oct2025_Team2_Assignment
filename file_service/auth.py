@@ -36,7 +36,7 @@ def get_authenticated_user_id(request):
         print("JWT decode failed:", e)
         return None
 
-    user_id = payload.get("user_id")
+    user_id = payload.get("sub")
     if isinstance(user_id, int):
         return user_id
     if isinstance(user_id, str) and user_id.isdigit():

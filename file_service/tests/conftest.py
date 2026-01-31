@@ -13,7 +13,7 @@ def set_testing_env():
 
 def make_test_jwt(user_id=1, role="user"):
     payload = {
-        "user_id": user_id,
+        "sub": str(user_id),  
         "role": role,
         "exp": datetime.now(UTC) + timedelta(minutes=5),
     }
