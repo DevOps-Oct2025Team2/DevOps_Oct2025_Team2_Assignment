@@ -7,3 +7,5 @@ cryptography
 Werkzeug
 pytest
 Flask-CORS
+jaraco.context>=6.1.0
+wheel>=0.46.2
