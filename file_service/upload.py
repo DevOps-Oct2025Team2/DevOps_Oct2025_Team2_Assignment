@@ -24,10 +24,11 @@ def save_upload_for_user(user_id, file_storage, upload_dir, max_size, allowed_ty
     # ensure upload directory exists 
     os.makedirs(upload_dir, exist_ok=True)
 
-    # generate safe storage name
-    original_name = os.path.basename(file_storage.filename) # strips any path traversal
-    ext = os.path.splitext(original_name)[1]               # keep extension like ".txt"
-    stored_name = f"{uuid.uuid4().hex}{ext}"
+    # keep original filename only for metadata
+    original_name = os.path.basename(file_storage.filename)
+
+    # disk filename is server-generated ONLY (CodeQL-friendly)
+    stored_name = uuid.uuid4().hex
 
     storage_path = os.path.join(upload_dir, stored_name)
 
