@@ -3,3 +3,7 @@ Flask-SQLAlchemy
 Flask-Migrate
 psycopg2-binary
 pytest
+flask-cors
+PyJWT
+jaraco.context>=6.1.0
+wheel>=0.46.2

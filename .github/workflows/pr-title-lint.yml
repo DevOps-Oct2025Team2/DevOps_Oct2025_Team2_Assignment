@@ -1,0 +1,27 @@
+name: PR Title Lint
+
+on:
+    pull_request:
+        types: [opened, edited, synchronize, reopened]
+
+jobs:
+    title-check:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Check PR title
+              uses: amannn/action-semantic-pull-request@v5
+              with:
+                types: |
+                  feat
+                  fix
+                  chore
+                  docs
+                  test
+                  refactor
+                  perf
+                  ci
+                  build
+                requireScope: false
+                subjectPattern: ^(?![A-Z]).+
+              env:
+                GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
