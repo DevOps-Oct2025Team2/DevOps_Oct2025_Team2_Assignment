@@ -67,7 +67,9 @@ def upload_dashboard_file():
         )
     except ValueError as e:
         # AC-FILE-02: reject invalid upload, no persistence
-        return jsonify({"error": str(e)}), 400
+        # Log internal error details server-side without exposing them to the client
+        current_app.logger.warning("Upload validation failed: %s", e)
+        return jsonify({"error": "Invalid upload"}), 400
     
     # Return response json
     return jsonify({
