@@ -22,6 +22,6 @@ jobs:
                   ci
                   build
                 requireScope: false
-                subjecPattern: ^(?![A-Z]).+
+                subjectPattern: ^(?![A-Z]).+
               env:
                 GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
