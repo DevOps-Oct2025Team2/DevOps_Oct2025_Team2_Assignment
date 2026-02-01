@@ -3,6 +3,7 @@ from flask_migrate import Migrate
 from db import db
 from flask_cors import CORS
 import models
+import os
 
 def create_app(database_uri=None):
     app = Flask(__name__)
@@ -16,7 +17,7 @@ def create_app(database_uri=None):
     )
 
     if database_uri is None:
-        database_uri = "postgresql+psycopg2://file_user:file_pass@localhost:5434/file_db"
+        database_uri = os.getenv("DATABASE_URL") or "postgresql+psycopg2://file_user:file_pass@localhost:5434/file_db"
 
     app.config["SQLALCHEMY_DATABASE_URI"] = database_uri
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False

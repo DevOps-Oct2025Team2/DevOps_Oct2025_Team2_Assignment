@@ -1,38 +1,52 @@
-# Use a slim, officially maintained Python base image
+# Use an official slim Python base image
+# - Smaller attack surface
+# - Maintained by the Python team
 FROM python:3.11-slim-bookworm
 
-# Disable interactive prompts during package installation
+# Prevent interactive prompts during apt operations
+# (important for non-interactive CI/CD environments)
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Update and patch OS packages to fix security vulnerabilities
+# Update OS packages and install only essential certificates
+# - apt-get upgrade patches known OS vulnerabilities
+# - ca-certificates required for HTTPS (pip, APIs, etc.)
+# - --no-install-recommends keeps the image small
 RUN apt-get update \
     && apt-get upgrade -y \
-    && apt-get install -y --no-install-recommends \
-       ca-certificates \
+    && apt-get install -y --no-install-recommends ca-certificates \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Create a non-root user to improve container security
+# Create a non-root user for security hardening
+# Running applications as root is a common container vulnerability
 RUN useradd -m appuser
 
 # Set the working directory inside the container
+# All subsequent commands run from /app
 WORKDIR /app
 
-# Copy dependency list to leverage Docker layer caching
+# Copy dependency list first to leverage Docker layer caching
+# Dependencies only reinstall if requirements.txt changes
 COPY requirements.txt .
 
-# Install Python dependencies without caching
+# Upgrade pip and install Python dependencies
+# --no-cache-dir prevents pip cache from bloating the image
 RUN pip install --no-cache-dir --upgrade pip \
-    && pip install --no-cache-dir --upgrade --force-reinstall \
-       wheel>=0.46.2 \
-       jaraco.context>=6.1.0 \
     && pip install --no-cache-dir --upgrade -r requirements.txt
 
-# Copy the application source code into the container
+# Copy the rest of the application source code
 COPY . .
 
-# Run the application as a non-root user
+# Create an uploads directory and give ownership to non-root user
+# Required if the service writes files at runtime (e.g. uploaded files)
+RUN mkdir -p /app/uploads && chown -R appuser:appuser /app/uploads
+
+# Drop privileges and run as non-root user
 USER appuser
 
-# Start the Python application when the container launches
+# Document the port the Flask app listens on
+# (informational but good practice for tooling and IaC)
+EXPOSE 5002
+
+# Start the Flask application
 CMD ["python", "app.py"]
