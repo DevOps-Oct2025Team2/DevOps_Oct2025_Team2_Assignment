@@ -25,6 +25,16 @@ services:
     volumes:
       - file_db_data:/var/lib/postgresql/data
 
+  file-service:
+    build: ./file_service
+    container_name: file-service
+    environment:
+      DATABASE_URL: postgresql+psycopg2://file_user:file_pass@file-db:5432/file_db
+    depends_on:
+      - file-db
+    ports:
+      - "5002:5002"
+
 volumes:
   auth_db_data:
   file_db_data:
