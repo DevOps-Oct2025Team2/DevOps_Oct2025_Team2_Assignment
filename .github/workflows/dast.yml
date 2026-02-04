@@ -30,7 +30,8 @@ jobs:
       # Step 3: Start databases with Docker Compose
       - name: Start database services
         run: |
-          docker-compose up -d
+          docker compose version
+          docker compose up -d
           echo "Waiting for databases to be ready..."
           sleep 15
 
