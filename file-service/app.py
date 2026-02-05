@@ -9,11 +9,11 @@ import os
 def create_app(database_uri=None):
     app = Flask(__name__)
 
-    # Prometheus metrics (/metrics)
-    metrics = PrometheusMetrics(app)
+    # # Prometheus metrics (/metrics)
+    # metrics = PrometheusMetrics(app)
 
-    # Add a label so can filter by service in Grafana
-    metrics.info("app_info", "File service info", version="1.0.0", service="file-service")
+    # # Add a label so can filter by service in Grafana
+    # metrics.info("app_info", "File service info", version="1.0.0", service="file-service")
     CORS(
         app,
         origins=["http://localhost:3000", "http://127.0.0.1:3000"],
