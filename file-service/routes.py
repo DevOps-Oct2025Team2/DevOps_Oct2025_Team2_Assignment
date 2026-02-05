@@ -5,6 +5,20 @@ from dashboard import get_files_for_user, delete_file_for_user, get_file_for_dow
 from flask import current_app #The Flask app that is handling this request right now
 from upload import save_upload_for_user
 from auth import get_authenticated_user_id
+from notify import notify_event
+from datetime import datetime, timezone
+
+def _email_body(event, status, user_id=None, extra=""):
+    ts = datetime.now(timezone.utc).isoformat()
+    uid = user_id if user_id else "unknown"
+    service = os.getenv("SERVICE_NAME", "file-service")
+
+    base = (
+        f"ts={ts} service={service} event={event} status={status} "
+        f"method={request.method} path={request.path} "
+        f"user_id={uid} ip={request.remote_addr}"
+    )
+    return base + (f" {extra}" if extra else "")
 
 bp = Blueprint("routes", __name__)
 
@@ -14,6 +28,12 @@ def dashboard():
 
     #AC-DASH-02: unauthenticated -> 401
     if not user_id:
+        notify_event(
+            event_type="dashboard_unauthorized",
+            subject="Unauthorized dashboard access",
+            body=f"event=dashboard_unauthorized status=401 method={request.method} path={request.path} ip={request.remote_addr}",
+            dedupe_key=request.remote_addr or "unknown"
+        )
         return jsonify({"error": "Unauthorized"}), 401
 
     # AC-DASH-03/04: server-enforced ownership filtering + empty list is OK
@@ -40,13 +60,26 @@ def upload_dashboard_file():
 
     # If header missing / invalid, reject immediately
     if not user_id:
+        notify_event(
+            event_type="upload_unauthorized",
+            subject="Unauthorized upload",
+            body=_email_body("upload_unauthorized", 401),
+            dedupe_key=request.remote_addr or "unknown"
+        )
+
         return jsonify({"error": "Unauthorized"}), 401
     
     # Uploaded files are sent via multipart/form-data
     # Flask stores them in request.files (a dict-like object).
     # If the "file" field isn't present then reject
     if "file" not in request.files:
-        return jsonify({"error" : "No file provided"}), 400
+        notify_event(
+            event_type="upload_missing_file",
+            subject="File Service: Upload failed (no file)",
+            body=f"user_id={user_id} status=400 ip={request.remote_addr}",
+            dedupe_key=request.remote_addr or "unknown"
+        )
+        return jsonify({"error": "No file provided"}), 400
     
     # This is a Werkzeug FileStorage object (has .filename, .content_type, .stream, etc.)
     file_storage = request.files["file"]
@@ -69,8 +102,22 @@ def upload_dashboard_file():
         # AC-FILE-02: reject invalid upload, no persistence
         # Log internal error details server-side without exposing them to the client
         current_app.logger.warning("Upload validation failed: %s", e)
+        notify_event(
+            event_type="upload_invalid",
+            subject="Upload rejected",
+            body=_email_body("upload_invalid", 400),
+            dedupe_key=request.remote_addr or "unknown"
+        )
+
         return jsonify({"error": "Invalid upload"}), 400
     
+    notify_event(
+        event_type="upload_success",
+        subject="[Runtime ✅] File Service: Upload successful",
+        body=_email_body("upload_success", 201, user_id, extra=f"filename={saved.filename} size_bytes={saved.size_bytes}"),
+        dedupe_key=f"user:{user_id}"
+    )
+
     # Return response json
     return jsonify({
         "file" : {
@@ -87,10 +134,22 @@ def upload_dashboard_file():
 def delete_file(file_id: int):
     user_id = get_authenticated_user_id(request)
     if not user_id:
+        notify_event(
+            event_type="delete_unauthorized",
+            subject="Unauthorized delete attempt",
+            body=f"event=delete_unauthorized status=401 method={request.method} path={request.path} file_id={file_id} ip={request.remote_addr}",
+            dedupe_key=request.remote_addr or "unknown"
+        )
         return jsonify({"error": "Unauthorized"}), 401
     
     ok = delete_file_for_user(user_id, file_id)
     if not ok:
+        notify_event(
+            event_type="delete_not_found",
+            subject="Delete failed (not found)",
+            body=f"event=delete_not_found status=404 method={request.method} path={request.path} user_id={user_id} file_id={file_id} ip={request.remote_addr}",
+            dedupe_key=request.remote_addr or "unknown"
+        )
         return jsonify({"error": "Not found"}), 404
     
     return jsonify({"message":"File deleted successfully"}), 200
@@ -99,10 +158,22 @@ def delete_file(file_id: int):
 def download_file(file_id: int):
     user_id = get_authenticated_user_id(request)
     if not user_id:
+        notify_event(
+            event_type="download_unauthorized",
+            subject="Unauthorized download attempt",
+            body=f"event=download_unauthorized status=401 method={request.method} path={request.path} file_id={file_id} ip={request.remote_addr}",
+            dedupe_key=request.remote_addr or "unknown"
+        )
         return jsonify({"error": "Unauthorized"}), 401
     
     f = get_file_for_download(user_id, file_id)
     if not f:
+        notify_event(
+            event_type="download_not_found",
+            subject="Download failed (not found)",
+            body=f"event=download_not_found status=404 method={request.method} path={request.path} user_id={user_id} file_id={file_id} ip={request.remote_addr}",
+            dedupe_key=request.remote_addr or "unknown"
+        )
         return jsonify({"error": "Not found"}), 404
     
     # If record exists but file missing on disk -> treat as not found
@@ -115,3 +186,9 @@ def download_file(file_id: int):
         download_name=f.filename,
         mimetype=f.content_type
     )
+
+@bp.get("/test/crash")
+def test_crash():
+    if current_app.config.get("TESTING"):
+        raise RuntimeError("test crash")
+    return jsonify({"error": "not allowed"}), 403
