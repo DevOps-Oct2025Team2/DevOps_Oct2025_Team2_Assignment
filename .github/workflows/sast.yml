@@ -67,3 +67,52 @@ jobs:
         with:
           name: sast-reports
           path: reports/
+
+
+  notify-stakeholders:
+    name: Notify Stakeholders (Email)
+    runs-on: ubuntu-latest
+    needs: [analyze]
+    if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Send SUCCESS email (SAST)
+        if: needs.analyze.result == 'success'
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          secure: false
+          username: ${{ secrets.SMTP_USERNAME }}
+          password: ${{ secrets.SMTP_PASSWORD }}
+          subject: "[SAST ✅] ${{ github.repository }} @ ${{ github.ref_name }}"
+          to: ${{ secrets.EMAIL_TO }}
+          from: "CI Bot <${{ secrets.SMTP_USERNAME }}>"
+          body: |
+            SAST (CodeQL): SUCCESS ✅
+            Repo: ${{ github.repository }}
+            Branch: ${{ github.ref_name }}
+            Commit: ${{ github.sha }}
+            Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+      - name: Send FAILURE email (SAST)
+        if: needs.analyze.result != 'success'
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          secure: false
+          username: ${{ secrets.SMTP_USERNAME }}
+          password: ${{ secrets.SMTP_PASSWORD }}
+          subject: "[SAST ❌] ${{ github.repository }} @ ${{ github.ref_name }}"
+          to: ${{ secrets.EMAIL_TO }}
+          from: "CI Bot <${{ secrets.SMTP_USERNAME }}>"
+          body: |
+            SAST (CodeQL): FAILURE ❌
+            Repo: ${{ github.repository }}
+            Branch: ${{ github.ref_name }}
+            Commit: ${{ github.sha }}
+            Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+            Job result:
+            - analyze: ${{ needs.analyze.result }}
