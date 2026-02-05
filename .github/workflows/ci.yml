@@ -37,11 +37,11 @@ jobs:
               run: python -m pytest -v
 
     test-file:
-        name: Test file_service
+        name: Test file-service
         runs-on: ubuntu-latest
         defaults:
             run:
-                working-directory: file_service
+                working-directory: file-service
         steps:
             - name: Checkout code
               uses: actions/checkout@v4
@@ -55,7 +55,7 @@ jobs:
               uses: actions/cache@v4
               with:
                 path: ~/.cache/pip
-                key: ${{ runner.os }}-pip-${{ hashFiles('**file_service/requirements.txt') }}
+                key: ${{ runner.os }}-pip-${{ hashFiles('**file-service/requirements.txt') }}
                 restore-keys: |
                   ${{ runner.os }}-pip-file-
 
@@ -83,8 +83,8 @@ jobs:
             - name: Build auth-service image
               run: docker build -t auth-service:ci ./auth-service
 
-            - name: Build file_service image
-              run: docker build -t file-service:ci ./file_service
+            - name: Build file-service image
+              run: docker build -t file-service:ci ./file-service
 
     scan-docker-images:
         name: Scan Docker Images (Trivy)
@@ -102,7 +102,7 @@ jobs:
               run: docker build -t auth-service:ci ./auth-service
 
             - name: Build file-service image for scan
-              run: docker build -t file-service:ci ./file_service
+              run: docker build -t file-service:ci ./file-service
 
             - name: Scan auth-service image
               uses: aquasecurity/trivy-action@0.20.0
