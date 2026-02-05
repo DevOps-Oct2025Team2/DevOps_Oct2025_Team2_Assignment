@@ -9,11 +9,11 @@ import os
 def create_app(database_uri=None):
     app = Flask(__name__)
 
-    # # Prometheus metrics (/metrics)
-    # metrics = PrometheusMetrics(app)
+    app.config["ENABLE_METRICS"] = os.getenv("ENABLE_METRICS", "true").lower() == "true"
 
-    # # Add a label so can filter by service in Grafana
-    # metrics.info("app_info", "File service info", version="1.0.0", service="file-service")
+    if app.config["ENABLE_METRICS"]:
+        metrics = PrometheusMetrics(app)
+        
     CORS(
         app,
         origins=["http://localhost:3000", "http://127.0.0.1:3000"],
@@ -28,7 +28,7 @@ def create_app(database_uri=None):
 
     app.config["SQLALCHEMY_DATABASE_URI"] = database_uri
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-    app.config["TESTING"] = True
+    app.config["TESTING"] = False
 
     app.config["UPLOAD_DIR"] = "uploads"
     app.config["MAX_UPLOAD_SIZE_BYTES"] = 5 * 1024 * 1024

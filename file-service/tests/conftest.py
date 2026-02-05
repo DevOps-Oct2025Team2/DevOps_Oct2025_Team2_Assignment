@@ -19,11 +19,6 @@ def make_test_jwt(user_id=1, role="user"):
     }
     return jwt.encode(payload, "test-secret", algorithm="HS256")
 
-@pytest.fixture(autouse=True)
-def set_testing_env():
-    os.environ["TESTING"] = "true"
-    os.environ["JWT_SECRET"] = "test-secret"
-
 @pytest.fixture
 def app():
     app = create_app("sqlite:///:memory:")
