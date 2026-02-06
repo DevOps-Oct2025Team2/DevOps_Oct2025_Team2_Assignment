@@ -190,8 +190,6 @@ function renderFiles(files) {
   }
 }
 
-=======
-
 // Small helper: show a message to the user
 function showMessage(text, isError = false) {
     if (!msgBox) return;
@@ -290,8 +288,6 @@ function renderFiles(files) {
     filesContainer.appendChild(ul);
 }
 
-
->>>>>>> 72b200aa15fa40e417b504ac8cb31d4d63646d25
 // Fetch dashboard files and render them
 async function loadDashboard() {
     try {
@@ -313,13 +309,8 @@ async function handleUpload() {
         const file = fileInput?.files?.[0];
 
         if (!file) {
-<<<<<<< HEAD
             showMessage("Please select a file first.", true);
             return;
-=======
-        showMessage("Please select a file first.", true);
-        return;
->>>>>>> 72b200aa15fa40e417b504ac8cb31d4d63646d25
         }
 
         uploadBtn.disabled = true;
@@ -341,7 +332,6 @@ async function handleUpload() {
 }
 
 // Wire up events
-<<<<<<< HEAD
 if (uploadBtn && fileInput) {
   uploadBtn.addEventListener("click", () => fileInput.click());
   fileInput.addEventListener("change", handleUpload); // auto upload
@@ -378,12 +368,5 @@ confirmDeleteBtn?.addEventListener("click", async () => {
     if (deleteBtn) deleteBtn.disabled = false;
   }
 });
-
-=======
-if (uploadBtn) {
-    uploadBtn.addEventListener("click", handleUpload);
-}
-
->>>>>>> 72b200aa15fa40e417b504ac8cb31d4d63646d25
 // Run on page load
 loadDashboard();
