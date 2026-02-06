@@ -34,7 +34,7 @@ def notify_event(event_type: str, subject: str, body: str, dedupe_key: str = "")
 def send_email_smtp(subject: str, body: str) -> None:
     smtp_user = os.getenv("SMTP_USERNAME")
     smtp_pass = os.getenv("SMTP_PASSWORD")
-    to_addr = os.getenv("EMAIL_TO")
+    to_addr = os.getenv("RUNTIME_EMAIL_TO")
     from_addr = os.getenv("EMAIL_FROM") or smtp_user
     service = os.getenv("SERVICE_NAME", "file-service")
     env = os.getenv("APP_ENV", "dev")

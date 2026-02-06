@@ -31,11 +31,11 @@ services:
     environment:
       DATABASE_URL: postgresql+psycopg2://file_user:file_pass@file-db:5432/file_db
       # runtime email settings (values come from .env)
-      ENABLE_RUNTIME_EMAILS: ${ENABLE_RUNTIME_EMAILS}
       EMAIL_RATE_LIMIT_SECONDS: ${EMAIL_RATE_LIMIT_SECONDS}
+      ENABLE_RUNTIME_EMAILS: ${ENABLE_RUNTIME_EMAILS}
       SMTP_USERNAME: ${SMTP_USERNAME}
       SMTP_PASSWORD: ${SMTP_PASSWORD}
-      EMAIL_TO: ${EMAIL_TO}
+      RUNTIME_EMAIL_TO: ${RUNTIME_EMAIL_TO}
       EMAIL_FROM: ${EMAIL_FROM}
     depends_on:
       - file-db
@@ -59,8 +59,10 @@ services:
       - "3001:3000"
     depends_on:
       - prometheus
-
+    volumes:
+    - grafana_data:/var/lib/grafana
 
 volumes:
   auth_db_data:
   file_db_data:
+  grafana_data:
