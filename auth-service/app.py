@@ -18,7 +18,21 @@ from notify import notify_event
 from prometheus_flask_exporter import PrometheusMetrics
 
 app = Flask(__name__)
-CORS(app) 
+
+def _get_cors_origins():
+    raw_origins = os.getenv(
+        "CORS_ALLOWED_ORIGINS",
+        "http://localhost:3000,http://127.0.0.1:3000",
+    )
+    return [origin.strip() for origin in raw_origins.split(",") if origin.strip()]
+
+CORS(
+    app,
+    origins=_get_cors_origins(),
+    allow_headers="*",
+    methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    supports_credentials=False,
+)
 
 metrics = PrometheusMetrics(app)
 

@@ -24,9 +24,16 @@ def create_app(database_uri=None):
     if app.config["ENABLE_METRICS"]:
         metrics = PrometheusMetrics(app)
         
+    def _get_cors_origins():
+        raw_origins = os.getenv(
+            "CORS_ALLOWED_ORIGINS",
+            "http://localhost:3000,http://127.0.0.1:3000",
+        )
+        return [origin.strip() for origin in raw_origins.split(",") if origin.strip()]
+
     CORS(
         app,
-        origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+        origins=_get_cors_origins(),
         allow_headers="*",
         expose_headers=["Content-Disposition"],
         methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
