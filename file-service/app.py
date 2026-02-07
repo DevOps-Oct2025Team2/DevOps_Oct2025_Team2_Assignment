@@ -16,7 +16,6 @@ from notify import notify_event
 from werkzeug.exceptions import HTTPException
 from datetime import datetime, timezone
 
-
 def create_app(database_uri=None):
     app = Flask(__name__)
 
@@ -41,7 +40,7 @@ def create_app(database_uri=None):
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     app.config["TESTING"] = False
 
-    app.config["UPLOAD_DIR"] = "uploads"
+    app.config["UPLOAD_DIR"] = os.getenv("UPLOAD_DIR", "uploads")
     app.config["MAX_UPLOAD_SIZE_BYTES"] = 5 * 1024 * 1024
     app.config["ALLOWED_CONTENT_TYPES"] = {"text/plain", "image/png"}
 
