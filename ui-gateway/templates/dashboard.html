@@ -1,18 +1,105 @@
+<!-- dashboard.html -->
+<link rel="stylesheet" href="/static/css/dashboard.css" />
+
 <script src="/static/js/utils/authGuard.js"></script>
 <script src="/static/js/utils/logout.js"></script>
 <script type="module" src="/static/js/pages/dashboard.js"></script>
-<button onclick="logout()">Logout</button>
 
-<h1>User Dashboard</h1>
+<div class="app-shell">
+  <!-- Top Navbar -->
+  <header class="nav">
+    <div class="nav-left">
+      <div class="brand-icon" aria-hidden="true">
+        <!-- shield icon -->
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+          <path d="M12 2l8 4v6c0 5-3.4 9.4-8 10-4.6-.6-8-5-8-10V6l8-4z" stroke="currentColor" stroke-width="2" />
+        </svg>
+      </div>
+      <div class="brand">
+        <div class="brand-name">SecureVault</div>
+        <span class="badge">USER PORTAL</span>
+      </div>
+    </div>
 
-<div id="msg"></div>
+    <div class="nav-right">
+      <div class="user-pill">
+        <div class="avatar">T</div>
+        <div class="username" id="username">testUser</div>
+      </div>
 
-<div>
-    <input type="file" id="fileInput" />
-    <button id="uploadBtn">Upload</button>
+      <button class="link-btn" onclick="logout()">
+        <span class="logout-icon" aria-hidden="true">⇦</span>
+        Logout
+      </button>
+    </div>
+  </header>
+
+  <main class="page">
+    <h1 class="page-title">My Secure Files</h1>
+
+    <!-- Message box -->
+    <div id="msg" class="msg" role="status" aria-live="polite"></div>
+
+    <!-- File Manager Card -->
+    <section class="card">
+      <div class="card-head">
+        <div>
+          <div class="card-title">File Manager</div>
+          <div class="card-subtitle">Securely stored and isolated to your account.</div>
+        </div>
+
+        <div class="card-actions">
+          <button id="refreshBtn" class="icon-btn" type="button" title="Refresh">
+            <!-- refresh icon -->
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+              <path d="M20 12a8 8 0 10-2.3 5.7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              <path d="M20 8v4h-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+          </button>
+
+          <!-- We'll trigger file input via this button -->
+          <button id="uploadBtn" class="btn btn-primary" type="button">
+            <span class="btn-icon" aria-hidden="true">
+              <!-- upload icon -->
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                <path d="M12 16V4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                <path d="M7 9l5-5 5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M4 20h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+            </span>
+            Upload File
+          </button>
+
+          <!-- hidden input -->
+          <input type="file" id="fileInput" class="hidden" />
+        </div>
+      </div>
+
+      <hr class="divider" />
+
+      <!-- Files / Empty state -->
+      <div id="files" class="files"></div>
+    </section>
+
+    <footer class="footer">
+      © 2026 SecureVault Application. All Data Isolated.
+    </footer>
+    <!-- Delete Confirm Modal -->
+    <div class="modal-backdrop" id="confirmModal" aria-hidden="true">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+            <div class="modal-head">
+            <div class="modal-icon" aria-hidden="true">!</div>
+            <div>
+                <div class="modal-title" id="modalTitle">Delete file?</div>
+                <div class="modal-sub" id="modalSub">This action cannot be undone.</div>
+            </div>
+            </div>
+
+            <div class="modal-actions">
+            <button class="btn" type="button" id="cancelDeleteBtn">Cancel</button>
+            <button class="btn btn-danger-solid" type="button" id="confirmDeleteBtn">Delete</button>
+            </div>
+        </div>
+    </div>
+  </main>
 </div>
-
-<hr />
-
-<div id="files"></div>
-

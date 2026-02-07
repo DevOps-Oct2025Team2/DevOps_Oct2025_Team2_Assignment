@@ -1,8 +1,9 @@
-name: CI MVP Setup
+name: CI (Tests, Build, Scan)
 
 on:
-    push:
-    pull_request:
+  push:
+
+  pull_request:
 
 jobs:
     test-auth:
@@ -37,11 +38,11 @@ jobs:
               run: python -m pytest -v
 
     test-file:
-        name: Test file_service
+        name: Test file-service
         runs-on: ubuntu-latest
         defaults:
             run:
-                working-directory: file_service
+                working-directory: file-service
         steps:
             - name: Checkout code
               uses: actions/checkout@v4
@@ -55,7 +56,7 @@ jobs:
               uses: actions/cache@v4
               with:
                 path: ~/.cache/pip
-                key: ${{ runner.os }}-pip-${{ hashFiles('**file_service/requirements.txt') }}
+                key: ${{ runner.os }}-pip-${{ hashFiles('**file-service/requirements.txt') }}
                 restore-keys: |
                   ${{ runner.os }}-pip-file-
 
@@ -83,8 +84,8 @@ jobs:
             - name: Build auth-service image
               run: docker build -t auth-service:ci ./auth-service
 
-            - name: Build file_service image
-              run: docker build -t file-service:ci ./file_service
+            - name: Build file-service image
+              run: docker build -t file-service:ci ./file-service
 
     scan-docker-images:
         name: Scan Docker Images (Trivy)
@@ -102,7 +103,7 @@ jobs:
               run: docker build -t auth-service:ci ./auth-service
 
             - name: Build file-service image for scan
-              run: docker build -t file-service:ci ./file_service
+              run: docker build -t file-service:ci ./file-service
 
             - name: Scan auth-service image
               uses: aquasecurity/trivy-action@0.20.0
@@ -121,3 +122,62 @@ jobs:
                 exit-code: 1
                 format: table
                 trivyignores: .trivyignore
+
+    notify-stakeholders:
+      name: Notify Stakeholders (Email)
+      runs-on: ubuntu-latest
+      needs: [test-auth, test-file, build-docker, scan-docker-images]
+      if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+      steps:
+        - name: Send SUCCESS email
+          if: >
+            needs.test-auth.result == 'success' &&
+            needs.test-file.result == 'success' &&
+            needs.build-docker.result == 'success' &&
+            needs.scan-docker-images.result == 'success'
+          uses: dawidd6/action-send-mail@v3
+          with:
+            server_address: smtp.gmail.com
+            server_port: 587
+            secure: false
+            username: ${{ secrets.SMTP_USERNAME }}
+            password: ${{ secrets.SMTP_PASSWORD }}
+            subject: "[CI] ${{ github.repository }} @ ${{ github.ref_name }}"
+            to: ${{ secrets.EMAIL_TO }}
+            from: "CI Bot <${{ secrets.SMTP_USERNAME }}>"
+            body: |
+              CI Pipeline: SUCCESS 
+              Repo: ${{ github.repository }}
+              Branch: ${{ github.ref_name }}
+              Commit: ${{ github.sha }}
+              Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+        - name: Send FAILURE email
+          if: >
+            needs.test-auth.result != 'success' ||
+            needs.test-file.result != 'success' ||
+            needs.build-docker.result != 'success' ||
+            needs.scan-docker-images.result != 'success'
+          uses: dawidd6/action-send-mail@v3
+          with:
+            server_address: smtp.gmail.com
+            server_port: 587
+            secure: false
+            username: ${{ secrets.SMTP_USERNAME }}
+            password: ${{ secrets.SMTP_PASSWORD }}
+            subject: "[CI] ${{ github.repository }} @ ${{ github.ref_name }}"
+            to: ${{ secrets.EMAIL_TO }}
+            from: "CI Bot <${{ secrets.SMTP_USERNAME }}>"
+            body: |
+              CI Pipeline: FAILURE 
+              Repo: ${{ github.repository }}
+              Branch: ${{ github.ref_name }}
+              Commit: ${{ github.sha }}
+              Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+              Job results:
+                - test-auth: ${{ needs.test-auth.result }}
+                - test-file: ${{ needs.test-file.result }}
+                - build-docker: ${{ needs.build-docker.result }}
+                - scan-docker-images: ${{ needs.scan-docker-images.result }}
