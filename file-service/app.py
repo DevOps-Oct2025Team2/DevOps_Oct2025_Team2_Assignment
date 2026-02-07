@@ -79,7 +79,8 @@ def create_app(database_uri=None):
 
     return app
 
-app = create_app()
+app = create_app() if os.getenv("DATABASE_URL") else None
 
 if __name__ == "__main__":
+    app = create_app()
     app.run(host="0.0.0.0", port=5002)
