@@ -143,11 +143,11 @@ jobs:
             secure: false
             username: ${{ secrets.SMTP_USERNAME }}
             password: ${{ secrets.SMTP_PASSWORD }}
-            subject: "[CI ✅] ${{ github.repository }} @ ${{ github.ref_name }}"
+            subject: "[CI] ${{ github.repository }} @ ${{ github.ref_name }}"
             to: ${{ secrets.EMAIL_TO }}
             from: "CI Bot <${{ secrets.SMTP_USERNAME }}>"
             body: |
-              CI Pipeline: SUCCESS ✅
+              CI Pipeline: SUCCESS 
               Repo: ${{ github.repository }}
               Branch: ${{ github.ref_name }}
               Commit: ${{ github.sha }}
@@ -166,11 +166,11 @@ jobs:
             secure: false
             username: ${{ secrets.SMTP_USERNAME }}
             password: ${{ secrets.SMTP_PASSWORD }}
-            subject: "[CI ❌] ${{ github.repository }} @ ${{ github.ref_name }}"
+            subject: "[CI] ${{ github.repository }} @ ${{ github.ref_name }}"
             to: ${{ secrets.EMAIL_TO }}
             from: "CI Bot <${{ secrets.SMTP_USERNAME }}>"
             body: |
-              CI Pipeline: FAILURE ❌
+              CI Pipeline: FAILURE 
               Repo: ${{ github.repository }}
               Branch: ${{ github.ref_name }}
               Commit: ${{ github.sha }}
