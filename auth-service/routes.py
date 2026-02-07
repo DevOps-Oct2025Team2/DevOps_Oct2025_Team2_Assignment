@@ -20,6 +20,7 @@ JWT_EXPIRY_HOURS = 1
 IS_TEST = (
     os.getenv("TESTING") == "true"
     or os.getenv("CI") == "true"
+    or os.getenv("DOCKER") == "true"
 )
 
 if IS_TEST:
@@ -31,10 +32,10 @@ else:
     # Local dev / production
     JWT_ALGORITHM = "ES256"
 
-    with open(BASE_DIR / "ec_private.pem", "r") as f:
+    with open(BASE_DIR / "ec_private.pem", "rb") as f:
         PRIVATE_KEY = f.read()
 
-    with open(BASE_DIR / "ec_public.pem", "r") as f:
+    with open(BASE_DIR / "ec_public.pem", "rb") as f:
         PUBLIC_KEY = f.read()
 
 
@@ -58,12 +59,16 @@ def login():
         return jsonify({"message": "Invalid credentials"}), 401
 
     payload = {
-        "sub": str(user.id),   
+        "sub": str(user.id),
         "role": user.role,
         "exp": datetime.now(UTC) + timedelta(hours=JWT_EXPIRY_HOURS)
     }
 
-    token = jwt.encode(payload, PRIVATE_KEY, algorithm=JWT_ALGORITHM)
+    try:
+        token = jwt.encode(payload, PRIVATE_KEY, algorithm=JWT_ALGORITHM)
+    except Exception as e:
+        print("JWT ERROR:", repr(e))
+        raise
 
     return jsonify({
         "access_token": token,
