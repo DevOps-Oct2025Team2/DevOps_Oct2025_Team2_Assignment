@@ -14,4 +14,3 @@ scrape_configs:
   - job_name: "ui-gateway"
     static_configs:
       - targets: ["ui-gateway:3000"]
-
