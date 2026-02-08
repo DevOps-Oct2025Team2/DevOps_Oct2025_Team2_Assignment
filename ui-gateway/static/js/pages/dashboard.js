@@ -68,8 +68,12 @@ function formatBytes(bytes) {
 function formatDate(iso) {
   if (!iso) return null;
   const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return null;
-  return d.toLocaleDateString();
+  return d.toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+  });
 }
 
 function renderFiles(files) {
@@ -188,7 +192,6 @@ function renderFiles(files) {
     filesContainer.appendChild(card);
   }
 }
-
 
 // Fetch dashboard files and render them
 async function loadDashboard() {
