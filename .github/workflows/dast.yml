@@ -34,18 +34,48 @@ jobs:
       # Step 3: Verify services are running
       - name: Check service health
         run: |
-          curl -f http://localhost:5000/health || echo "Auth not ready"
-          curl -f http://localhost:5002/health || echo "File not ready"
-          curl -f http://localhost:3000/health || echo "UI not ready"
+          set -e
+          max_wait=90
+          interval=5
+          elapsed=0
+
+          echo "Waiting for services to become healthy (max ${max_wait}s)..."
+          while [ $elapsed -lt $max_wait ]; do
+            auth_ok=0
+            file_ok=0
+            ui_ok=0
+
+            curl -fsS http://localhost:5000/health >/dev/null && auth_ok=1 || true
+            curl -fsS http://localhost:5002/health >/dev/null && file_ok=1 || true
+            curl -fsS http://localhost:3000/health >/dev/null && ui_ok=1 || true
+
+            if [ $auth_ok -eq 1 ] && [ $file_ok -eq 1 ] && [ $ui_ok -eq 1 ]; then
+              echo "All services are healthy."
+              exit 0
+            fi
+
+            echo "Not ready yet... auth=${auth_ok} file=${file_ok} ui=${ui_ok}. Retrying in ${interval}s."
+            sleep $interval
+            elapsed=$((elapsed + interval))
+          done
+
+          echo "Services did not become healthy within ${max_wait}s."
+          exit 1
 
       # Step 4: ZAP Baseline Scan - UI Gateway
       - name: ZAP Baseline Scan - UI Gateway
         uses: zaproxy/action-baseline@v0.12.0
         with:
           target: 'http://localhost:3000'
-          cmd_options: '-a -j -l WARN -J zap-ui.json -w zap-ui.md -r zap-ui.html'
+          cmd_options: '-a -j -l WARN'
           allow_issue_writing: false
           artifact_name: zap-ui-scan
+
+      - name: Capture UI ZAP reports
+        run: |
+          mv report_json.json zap-ui.json
+          mv report_md.md zap-ui.md
+          mv report_html.html zap-ui.html
           upload_artifact: false
 
       # Step 5: ZAP API Scan - Auth Service
@@ -54,9 +84,15 @@ jobs:
         with:
           target: 'auth-service/openapi.yaml'
           format: 'openapi'
-          cmd_options: '-a -j -l WARN -J zap-auth.json -w zap-auth.md -r zap-auth.html'
+          cmd_options: '-a -j -l WARN'
           allow_issue_writing: false
           artifact_name: zap-auth-scan
+
+      - name: Capture Auth ZAP reports
+        run: |
+          mv report_json.json zap-auth.json
+          mv report_md.md zap-auth.md
+          mv report_html.html zap-auth.html
           upload_artifact: false
 
       # Step 6: ZAP API Scan - File Service
@@ -65,9 +101,15 @@ jobs:
         with:
           target: 'file-service/openapi.yaml'
           format: 'openapi'
-          cmd_options: '-a -j -l WARN -J zap-file.json -w zap-file.md -r zap-file.html'
+          cmd_options: '-a -j -l WARN'
           allow_issue_writing: false
           artifact_name: zap-file-scan
+
+      - name: Capture File ZAP reports
+        run: |
+          mv report_json.json zap-file.json
+          mv report_md.md zap-file.md
+          mv report_html.html zap-file.html
           upload_artifact: false
 
       # Step 7: Enforce policy gate (FAIL on High only)
