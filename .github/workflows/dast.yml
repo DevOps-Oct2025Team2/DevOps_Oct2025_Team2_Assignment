@@ -45,6 +45,7 @@ jobs:
           target: 'http://localhost:3000'
           cmd_options: '-a -j -l WARN'
           allow_issue_writing: false
+          upload_artifact: false
 
       # Step 5: ZAP API Scan - Auth Service
       - name: ZAP API Scan - Auth Service
@@ -54,6 +55,7 @@ jobs:
           format: 'openapi'
           cmd_options: '-a -j -l WARN'
           allow_issue_writing: false
+          upload_artifact: false
 
       # Step 6: ZAP API Scan - File Service
       - name: ZAP API Scan - File Service
@@ -63,6 +65,7 @@ jobs:
           format: 'openapi'
           cmd_options: '-a -j -l WARN'
           allow_issue_writing: false
+          upload_artifact: false
 
       # Step 7: Enforce policy gate (FAIL on High only)
       - name: Enforce High-only DAST policy gate
@@ -93,7 +96,18 @@ jobs:
           print("DAST policy gate passed: no High severity issues found.")
           PY
 
-      # Step 9: Cleanup
+      #Step 9: Upload reports
+      - name: Upload DAST reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: dast-zap-reports
+          path: |
+            *.html
+            *.json
+            *.md
+
+      # Step 10: Cleanup
       - name: Stop services
         if: always()
         run: |
