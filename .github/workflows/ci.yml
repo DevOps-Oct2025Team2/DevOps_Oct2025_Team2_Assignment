@@ -170,7 +170,7 @@ jobs:
             username: ${{ secrets.SMTP_USERNAME }}
             password: ${{ secrets.SMTP_PASSWORD }}
             subject: "[CI] ${{ github.repository }} @ ${{ github.ref_name }}"
-            to: ${{ secrets.EMAIL_TO }}
+            to: ${{ secrets.EMAIL_STAKEHOLDERS }}
             from: "CI Bot <${{ secrets.SMTP_USERNAME }}>"
             body: |
               CI Pipeline: SUCCESS 
@@ -193,7 +193,7 @@ jobs:
             username: ${{ secrets.SMTP_USERNAME }}
             password: ${{ secrets.SMTP_PASSWORD }}
             subject: "[CI] ${{ github.repository }} @ ${{ github.ref_name }}"
-            to: ${{ secrets.EMAIL_TO }}
+            to: ${{ secrets.EMAIL_DEV }}
             from: "CI Bot <${{ secrets.SMTP_USERNAME }}>"
             body: |
               CI Pipeline: FAILURE 
