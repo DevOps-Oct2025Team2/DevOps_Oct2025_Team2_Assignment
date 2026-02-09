@@ -85,10 +85,9 @@ jobs:
         uses: zaproxy/action-baseline@v0.12.0
         with:
           target: 'http://localhost:3000'
-          cmd_options: '-a -j -l WARN'
+          cmd_options: '-a -j -l HIGH'
           allow_issue_writing: false
           artifact_name: 'zap-baseline-scan'
-        continue-on-error: true
 
       # Step 10: Run OWASP ZAP API Scan on Auth Service
       - name: ZAP API Scan - Auth Service
@@ -96,21 +95,19 @@ jobs:
         with:
           target: 'auth-service/openapi.yaml'
           format: 'openapi'
-          cmd_options: '-a -j -l WARN'
+          cmd_options: '-a -j -l HIGH'
           allow_issue_writing: false
           artifact_name: 'zap-api-auth-scan'
-        continue-on-error: true
 
       # Step 11: Run OWASP ZAP API Scan on File Service
       - name: ZAP API Scan - File Service
         uses: zaproxy/action-api-scan@v0.7.0
         with:
-          target: 'file_service/openapi.yaml'
+          target: 'file-service/openapi.yaml'
           format: 'openapi'
-          cmd_options: '-a -j -l WARN'
+          cmd_options: '-a -j -l HIGH'
           allow_issue_writing: false
           artifact_name: 'zap-api-file-scan'
-        continue-on-error: true
 
       # Step 12: Upload ZAP reports as artifacts
       - name: Upload DAST reports
