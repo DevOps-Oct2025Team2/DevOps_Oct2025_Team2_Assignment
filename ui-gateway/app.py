@@ -21,5 +21,9 @@ def admin_page():
 def dashboard_page():
     return render_template("dashboard.html")
 
+@app.route("/health", methods=["GET"])
+def health():
+    return {"status": "ok"}
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=3000)
