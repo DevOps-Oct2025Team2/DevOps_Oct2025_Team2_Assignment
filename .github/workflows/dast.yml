@@ -45,9 +45,9 @@ jobs:
             file_ok=0
             ui_ok=0
 
-            curl -fsS http://localhost:5000/health >/dev/null && auth_ok=1 || true
-            curl -fsS http://localhost:5002/health >/dev/null && file_ok=1 || true
-            curl -fsS http://localhost:3000/health >/dev/null && ui_ok=1 || true
+            docker compose exec -T auth-service python -c "import urllib.request as u; u.urlopen('http://localhost:5000/health', timeout=2).read()" >/dev/null 2>&1 && auth_ok=1 || true
+            docker compose exec -T file-service python -c "import urllib.request as u; u.urlopen('http://localhost:5002/health', timeout=2).read()" >/dev/null 2>&1 && file_ok=1 || true
+            docker compose exec -T ui-gateway python -c "import urllib.request as u; u.urlopen('http://localhost:3000/health', timeout=2).read()" >/dev/null 2>&1 && ui_ok=1 || true
 
             if [ $auth_ok -eq 1 ] && [ $file_ok -eq 1 ] && [ $ui_ok -eq 1 ]; then
               echo "All services are healthy."
