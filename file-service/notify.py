@@ -59,7 +59,7 @@ def send_email_smtp(to_addr: str, subject: str, body: str) -> None:
     # Make subject unique to avoid Gmail threading/throttling
     msg["Subject"] = f"[{env}][{service}] {subject} @ {int(time.time())}"
 
-    # Send to self, notify recipients via BCC
+    # Send to self, notify team via BCC
     msg["From"] = from_addr
     msg["To"] = from_addr
     msg["Bcc"] = to_addr
