@@ -47,7 +47,7 @@ def send_email_smtp(to_addr: str, subject: str, body: str) -> None:
     smtp_user = os.getenv("SMTP_USERNAME")
     smtp_pass = os.getenv("SMTP_PASSWORD")
     from_addr = os.getenv("EMAIL_FROM") or smtp_user
-    service = os.getenv("SERVICE_NAME", "auth-service")
+    service = os.getenv("SERVICE_NAME", "file-service")
     env = os.getenv("APP_ENV", "dev")
 
     # Fail quietly if not configured
@@ -66,11 +66,9 @@ def send_email_smtp(to_addr: str, subject: str, body: str) -> None:
 
     msg.set_content(body)
 
-    try:
-        with smtplib.SMTP("smtp.gmail.com", 587, timeout=10) as server:
-            server.ehlo()
-            server.starttls()
-            server.login(smtp_user, smtp_pass)
-            server.send_message(msg)
-    except Exception:
-        return
+    with smtplib.SMTP("smtp.gmail.com", 587, timeout=10) as server:
+        server.ehlo()
+        server.starttls()
+        server.login(smtp_user, smtp_pass)
+        server.send_message(msg)
+

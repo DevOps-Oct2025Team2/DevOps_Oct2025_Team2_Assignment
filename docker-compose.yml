@@ -74,6 +74,10 @@ services:
     ports:
       - "5000:5000"
 
+    depends_on:
+      - auth-db
+    ports:
+      - "5000:5000"
 
   ui-gateway:
     build: ./ui-gateway
