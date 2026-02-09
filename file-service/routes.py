@@ -29,7 +29,7 @@ def dashboard():
     #AC-DASH-02: unauthenticated -> 401
     if not user_id:
         notify_event(
-            event_type="dashboard_unauthorized",
+            event_type="security_dashboard_unauthorized",
             subject="Unauthorized dashboard access",
             body=f"event=dashboard_unauthorized status=401 method={request.method} path={request.path} ip={request.remote_addr}",
             dedupe_key=request.remote_addr or "unknown"
@@ -60,7 +60,7 @@ def upload_dashboard_file():
     # If header missing / invalid, reject immediately
     if not user_id:
         notify_event(
-            event_type="upload_unauthorized",
+            event_type="security_upload_unauthorized",
             subject="Unauthorized upload",
             body=_email_body("upload_unauthorized", 401),
             dedupe_key=request.remote_addr or "unknown"
@@ -133,7 +133,7 @@ def delete_file(file_id: int):
     user_id = get_authenticated_user_id(request)
     if not user_id:
         notify_event(
-            event_type="delete_unauthorized",
+            event_type="security_delete_unauthorized",
             subject="Unauthorized delete attempt",
             body=f"event=delete_unauthorized status=401 method={request.method} path={request.path} file_id={file_id} ip={request.remote_addr}",
             dedupe_key=request.remote_addr or "unknown"
@@ -157,7 +157,7 @@ def download_file(file_id: int):
     user_id = get_authenticated_user_id(request)
     if not user_id:
         notify_event(
-            event_type="download_unauthorized",
+            event_type="security_delete_unauthorized",
             subject="Unauthorized download attempt",
             body=f"event=download_unauthorized status=401 method={request.method} path={request.path} file_id={file_id} ip={request.remote_addr}",
             dedupe_key=request.remote_addr or "unknown"
@@ -187,6 +187,10 @@ def download_file(file_id: int):
 
 @bp.get("/test/crash")
 def test_crash():
-    if current_app.config.get("TESTING"):
-        raise RuntimeError("test crash")
-    return jsonify({"error": "not allowed"}), 403
+    notify_event(
+        event_type="ops_test_crash",
+        subject="Unhandled server error (500)",
+        body=_email_body("ops_test_crash", 500, extra="note=intentional crash endpoint"),
+        dedupe_key=request.remote_addr or "unknown",
+    )
+    raise RuntimeError("Intentional crash for testing/demo")
