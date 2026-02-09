@@ -27,7 +27,7 @@ jobs:
       # Step 2: Start services
       - name: Start services with Docker Compose
         run: |
-          docker compose up -d
+          docker compose -f docker-compose.yml -f docker-compose.ci.yml up -d
           echo "Waiting for services to initialise..."
           sleep 20
 
@@ -45,9 +45,9 @@ jobs:
             file_ok=0
             ui_ok=0
 
-            docker compose exec -T auth-service python -c "import urllib.request as u; u.urlopen('http://localhost:5000/health', timeout=2).read()" >/dev/null 2>&1 && auth_ok=1 || true
-            docker compose exec -T file-service python -c "import urllib.request as u; u.urlopen('http://localhost:5002/health', timeout=2).read()" >/dev/null 2>&1 && file_ok=1 || true
-            docker compose exec -T ui-gateway python -c "import urllib.request as u; u.urlopen('http://localhost:3000/health', timeout=2).read()" >/dev/null 2>&1 && ui_ok=1 || true
+            docker compose -f docker-compose.yml -f docker-compose.ci.yml exec -T auth-service python -c "import urllib.request as u; u.urlopen('http://localhost:5000/health', timeout=2).read()" >/dev/null 2>&1 && auth_ok=1 || true
+            docker compose -f docker-compose.yml -f docker-compose.ci.yml exec -T file-service python -c "import urllib.request as u; u.urlopen('http://localhost:5002/health', timeout=2).read()" >/dev/null 2>&1 && file_ok=1 || true
+            docker compose -f docker-compose.yml -f docker-compose.ci.yml exec -T ui-gateway python -c "import urllib.request as u; u.urlopen('http://localhost:3000/health', timeout=2).read()" >/dev/null 2>&1 && ui_ok=1 || true
 
             if [ $auth_ok -eq 1 ] && [ $file_ok -eq 1 ] && [ $ui_ok -eq 1 ]; then
               echo "All services are healthy."
@@ -60,21 +60,12 @@ jobs:
           done
 
           echo "Services did not become healthy within ${max_wait}s."
-            echo "--- docker compose ps ---"
-            docker compose ps
-            echo "--- auth-service logs (last 200 lines) ---"
-            docker compose logs --tail=200 auth-service
-            echo "--- auth-service /health debug ---"
-            docker compose exec -T auth-service python - <<'PY'
-            import urllib.request as u
-            import urllib.error as e
-            try:
-              resp = u.urlopen("http://localhost:5000/health", timeout=2)
-              print("status", resp.status)
-              print(resp.read().decode("utf-8", errors="ignore"))
-            except Exception as ex:
-              print("error", type(ex).__name__, ex)
-            PY
+          echo "--- docker compose ps ---"
+          docker compose -f docker-compose.yml -f docker-compose.ci.yml ps
+          echo "--- auth-service logs (last 200 lines) ---"
+          docker compose -f docker-compose.yml -f docker-compose.ci.yml logs --tail=200 auth-service
+          echo "--- auth-service /health debug ---"
+          docker compose -f docker-compose.yml -f docker-compose.ci.yml exec -T auth-service python -c "import urllib.request as u; resp=u.urlopen('http://localhost:5000/health', timeout=2); print('status', resp.status); print(resp.read().decode('utf-8', errors='ignore'))" || true
           exit 1
 
       # Step 4: ZAP Baseline Scan - UI Gateway
@@ -91,7 +82,6 @@ jobs:
           mv report_json.json zap-ui.json
           mv report_md.md zap-ui.md
           mv report_html.html zap-ui.html
-          upload_artifact: false
 
       # Step 5: ZAP API Scan - Auth Service
       - name: ZAP API Scan - Auth Service
@@ -108,7 +98,6 @@ jobs:
           mv report_json.json zap-auth.json
           mv report_md.md zap-auth.md
           mv report_html.html zap-auth.html
-          upload_artifact: false
 
       # Step 6: ZAP API Scan - File Service
       - name: ZAP API Scan - File Service
@@ -125,7 +114,6 @@ jobs:
           mv report_json.json zap-file.json
           mv report_md.md zap-file.md
           mv report_html.html zap-file.html
-          upload_artifact: false
 
       # Step 7: Enforce policy gate (FAIL on High only)
       - name: Enforce High-only DAST policy gate
@@ -171,4 +159,4 @@ jobs:
       - name: Stop services
         if: always()
         run: |
-          docker compose down -v
+          docker compose -f docker-compose.yml -f docker-compose.ci.yml down -v

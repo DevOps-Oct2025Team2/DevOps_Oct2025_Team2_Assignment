@@ -1,0 +1,5 @@
+services:
+  auth-service:
+    environment:
+      CI: "true"
+      JWT_SECRET: "unit-test-secret"
