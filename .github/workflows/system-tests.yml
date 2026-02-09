@@ -56,8 +56,8 @@ jobs:
 
       - name: Run DB migrations
         run: |
-          docker compose -f docker-compose.yml -f docker-compose.ci.yml exec -T auth-service sh -c "FLASK_APP=app.py flask db upgrade"
-          docker compose -f docker-compose.yml -f docker-compose.ci.yml exec -T file-service sh -c "FLASK_APP=app.py flask db upgrade"
+          docker compose -f docker-compose.yml -f docker-compose.ci.yml exec -T auth-service sh -c "python -m flask --app app db upgrade"
+          docker compose -f docker-compose.yml -f docker-compose.ci.yml exec -T file-service sh -c "python -m flask --app app db upgrade"
 
       - name: Seed sample users
         run: |
