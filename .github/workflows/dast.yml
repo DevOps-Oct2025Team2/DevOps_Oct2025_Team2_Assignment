@@ -87,7 +87,6 @@ jobs:
           target: 'http://localhost:3000'
           cmd_options: '-a -j -l WARN'
           allow_issue_writing: false
-          artifact_name: 'zap-baseline-scan'
 
       - name: Rename UI reports
         run: |
@@ -103,7 +102,6 @@ jobs:
           format: 'openapi'
           cmd_options: '-a -j -l WARN'
           allow_issue_writing: false
-          artifact_name: 'zap-api-auth-scan'
 
       - name: Rename Auth API reports
         run: |
@@ -119,7 +117,6 @@ jobs:
           format: 'openapi'
           cmd_options: '-a -j -l WARN'
           allow_issue_writing: false
-          artifact_name: 'zap-api-file-scan'
 
       - name: Rename File API reports
         run: |
