@@ -73,9 +73,14 @@ def send_email_smtp(subject: str, body: str) -> None:
         return
 
     msg = EmailMessage()
-    msg["Subject"] = f"[{env}][{service}] {subject}"
+    # Make subject unique to avoid Gmail threading/throttling
+    msg["Subject"] = f"[{env}][{service}] {subject} @ {int(time.time())}"
+
+    # Send to self, notify team via BCC
     msg["From"] = from_addr
-    msg["To"] = to_addr
+    msg["To"] = from_addr
+    msg["Bcc"] = to_addr
+
     msg.set_content(body)
 
     try:
