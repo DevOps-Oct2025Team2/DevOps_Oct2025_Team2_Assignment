@@ -1,15 +1,13 @@
-name: System Tests (Login + Dashboard)
+name: System Acceptance Tests
 
 on:
   push:
-    branches: [ main, qa/qa, dev ]
   pull_request:
-    branches: [ main, qa/qa, dev ]
   workflow_dispatch:
 
 jobs:
   system-tests:
-    name: System Tests (Login + Dashboard)
+    name: System Acceptance Tests
     runs-on: ubuntu-latest
 
     steps:
