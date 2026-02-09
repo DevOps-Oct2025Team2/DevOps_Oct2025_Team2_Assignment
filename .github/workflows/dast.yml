@@ -85,9 +85,15 @@ jobs:
         uses: zaproxy/action-baseline@v0.12.0
         with:
           target: 'http://localhost:3000'
-          cmd_options: '-a -j -l WARN -J zap-ui.json -w zap-ui.md -r zap-ui.html'
+          cmd_options: '-a -j -l WARN'
           allow_issue_writing: false
           artifact_name: 'zap-baseline-scan'
+
+      - name: Rename UI reports
+        run: |
+          if [ -f report_json.json ]; then mv report_json.json zap-ui.json; fi
+          if [ -f report_md.md ]; then mv report_md.md zap-ui.md; fi
+          if [ -f report_html.html ]; then mv report_html.html zap-ui.html; fi
 
       # Step 10: Run OWASP ZAP API Scan on Auth Service
       - name: ZAP API Scan - Auth Service
@@ -95,9 +101,15 @@ jobs:
         with:
           target: 'auth-service/openapi.yaml'
           format: 'openapi'
-          cmd_options: '-a -j -l WARN -J zap-api-auth.json -w zap-api-auth.md -r zap-api-auth.html'
+          cmd_options: '-a -j -l WARN'
           allow_issue_writing: false
           artifact_name: 'zap-api-auth-scan'
+
+      - name: Rename Auth API reports
+        run: |
+          if [ -f report_json.json ]; then mv report_json.json zap-api-auth.json; fi
+          if [ -f report_md.md ]; then mv report_md.md zap-api-auth.md; fi
+          if [ -f report_html.html ]; then mv report_html.html zap-api-auth.html; fi
 
       # Step 11: Run OWASP ZAP API Scan on File Service
       - name: ZAP API Scan - File Service
@@ -105,9 +117,15 @@ jobs:
         with:
           target: 'file-service/openapi.yaml'
           format: 'openapi'
-          cmd_options: '-a -j -l WARN -J zap-api-file.json -w zap-api-file.md -r zap-api-file.html'
+          cmd_options: '-a -j -l WARN'
           allow_issue_writing: false
           artifact_name: 'zap-api-file-scan'
+
+      - name: Rename File API reports
+        run: |
+          if [ -f report_json.json ]; then mv report_json.json zap-api-file.json; fi
+          if [ -f report_md.md ]; then mv report_md.md zap-api-file.md; fi
+          if [ -f report_html.html ]; then mv report_html.html zap-api-file.html; fi
 
       # Step 11.5: Fail pipeline on High alerts only
       - name: Enforce High-only policy gate
