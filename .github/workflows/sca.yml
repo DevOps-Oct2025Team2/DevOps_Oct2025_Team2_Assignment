@@ -18,7 +18,15 @@ jobs:
       - name: Checkout source code
         uses: actions/checkout@v4
 
-      # Step 2: Run OWASP Dependency-Check (ALL formats)
+      # Step 2: Install system test dependencies to generate lockfiles
+      - name: Install system test dependencies
+        run: |
+          cd system-tests/auth
+          npm install
+          cd ../dashboard
+          npm install
+
+      # Step 3: Run OWASP Dependency-Check (ALL formats)
       - name: Run OWASP Dependency-Check
         uses: dependency-check/Dependency-Check_Action@main
         with:
@@ -30,7 +38,7 @@ jobs:
             --failOnCVSS 7
             --enableRetired
 
-      # Step 3: Upload reports as artifacts
+      # Step 4: Upload reports as artifacts
       - name: Upload SCA reports
         uses: actions/upload-artifact@v4
         if: always()
@@ -38,7 +46,7 @@ jobs:
           name: sca-reports
           path: reports/
 
-      # Step 4: Upload SARIF to GitHub Security tab
+      # Step 5: Upload SARIF to GitHub Security tab
       - name: Upload SARIF to GitHub Security
         uses: github/codeql-action/upload-sarif@v3
         if: always() && hashFiles('reports/dependency-check-report.sarif') != ''
