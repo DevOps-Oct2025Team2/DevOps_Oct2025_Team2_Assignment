@@ -6,12 +6,12 @@ on:
     branches: [ main, qa/qa, dev ]
   pull_request:
     branches: [ main, qa/qa, dev ]
-  workflow_dispatch:  # Allow manual trigger
+  workflow_dispatch:
 
 permissions:
   contents: read
-  security-events: write   # Required to upload SARIF results
-  issues: write            # Optional: to create issues for findings
+  security-events: write
+  issues: write
 
 jobs:
   dast-scan:
@@ -23,79 +23,35 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Step 2: Create necessary directories
-      - name: Create reports directory
-        run: mkdir -p reports
-
-      # Step 3: Start databases with Docker Compose
-      - name: Start database services
+      # Step 2: Start services
+      - name: Start services with Docker Compose
         run: |
-          docker compose version
           docker compose up -d
-          echo "Waiting for databases to be ready..."
-          sleep 15
+          echo "Waiting for services to initialise..."
+          sleep 20
 
-      # Step 4: Set up Python environment for services
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      # Step 5: Install dependencies and start auth-service
-      - name: Start Auth Service
-        run: |
-          cd auth-service
-          pip install -r requirements.txt
-          export DATABASE_URL="postgresql+psycopg2://auth_user:auth_pass@localhost:5433/auth_db"
-          export FLASK_APP=app.py
-          flask db upgrade
-          nohup python app.py > auth.log 2>&1 &
-          echo $! > auth.pid
-          cd ..
-          sleep 10
-
-      # Step 6: Install dependencies and start file-service (via docker-compose)
-      - name: Wait for File Service
-        run: |
-          echo "File service started via docker-compose"
-          sleep 10
-
-      # Step 7: Install dependencies and start ui-gateway
-      - name: Start UI Gateway
-        run: |
-          cd ui-gateway
-          pip install -r requirements.txt
-          nohup python app.py > ui.log 2>&1 &
-          echo $! > ui.pid
-          cd ..
-          sleep 10
-
-      # Step 8: Verify services are running
+      # Step 3: Verify services are running
       - name: Check service health
         run: |
-          echo "Checking Auth Service (port 5000)..."
-          curl -f http://localhost:5000/health || echo "Auth Service not ready"
-          echo "Checking File Service (port 5002)..."
-          curl -f http://localhost:5002/health || echo "File Service not ready"
-          echo "Checking UI Gateway (port 3000)..."
-          curl -f http://localhost:3000/health || echo "UI Gateway not ready"
+          curl -f http://localhost:5000/health || echo "Auth not ready"
+          curl -f http://localhost:5002/health || echo "File not ready"
+          curl -f http://localhost:3000/health || echo "UI not ready"
 
-      # Step 9: Run OWASP ZAP Baseline Scan on UI Gateway
+      # Step 4: ZAP Baseline Scan - UI Gateway
       - name: ZAP Baseline Scan - UI Gateway
         uses: zaproxy/action-baseline@v0.12.0
         with:
           target: 'http://localhost:3000'
           cmd_options: '-a -j -l WARN'
           allow_issue_writing: false
-          artifact_name: 'zapscanui'
 
       - name: Rename UI reports
         run: |
-          if [ -f report_json.json ]; then mv report_json.json zap-ui.json; fi
-          if [ -f report_md.md ]; then mv report_md.md zap-ui.md; fi
-          if [ -f report_html.html ]; then mv report_html.html zap-ui.html; fi
+          mv report_json.json zap-ui.json
+          mv report_md.md zap-ui.md
+          mv report_html.html zap-ui.html
 
-      # Step 10: Run OWASP ZAP API Scan on Auth Service
+      # Step 5: ZAP API Scan - Auth Service
       - name: ZAP API Scan - Auth Service
         uses: zaproxy/action-api-scan@v0.7.0
         with:
@@ -103,15 +59,14 @@ jobs:
           format: 'openapi'
           cmd_options: '-a -j -l WARN'
           allow_issue_writing: false
-          artifact_name: 'zapscanauth'
 
       - name: Rename Auth API reports
         run: |
-          if [ -f report_json.json ]; then mv report_json.json zap-api-auth.json; fi
-          if [ -f report_md.md ]; then mv report_md.md zap-api-auth.md; fi
-          if [ -f report_html.html ]; then mv report_html.html zap-api-auth.html; fi
+          mv report_json.json zap-api-auth.json
+          mv report_md.md zap-api-auth.md
+          mv report_html.html zap-api-auth.html
 
-      # Step 11: Run OWASP ZAP API Scan on File Service
+      # Step 6: ZAP API Scan - File Service
       - name: ZAP API Scan - File Service
         uses: zaproxy/action-api-scan@v0.7.0
         with:
@@ -119,50 +74,43 @@ jobs:
           format: 'openapi'
           cmd_options: '-a -j -l WARN'
           allow_issue_writing: false
-          artifact_name: 'zapscanfile'
 
       - name: Rename File API reports
         run: |
-          if [ -f report_json.json ]; then mv report_json.json zap-api-file.json; fi
-          if [ -f report_md.md ]; then mv report_md.md zap-api-file.md; fi
-          if [ -f report_html.html ]; then mv report_html.html zap-api-file.html; fi
+          mv report_json.json zap-api-file.json
+          mv report_md.md zap-api-file.md
+          mv report_html.html zap-api-file.html
 
-      # Step 11.5: Fail pipeline on High alerts only
-      - name: Enforce High-only policy gate
+      # Step 7: Enforce policy gate (FAIL on High only)
+      - name: Enforce High-only DAST policy gate
         run: |
           python - <<'PY'
-          import json
-          import glob
-          import sys
+          import json, glob, sys
 
-          report_files = sorted(glob.glob("zap-*.json"))
-          if not report_files:
-            print("No ZAP JSON reports found to evaluate.")
-            sys.exit(1)
+          reports = glob.glob("zap-*.json")
+          if not reports:
+              print("No ZAP reports found")
+              sys.exit(1)
 
-          high_hits = []
-          for path in report_files:
-            with open(path, "r", encoding="utf-8") as f:
-              data = json.load(f)
-            for site in data.get("site", []):
-              for alert in site.get("alerts", []):
-                if (alert.get("risk") or "").lower() == "high":
-                  high_hits.append({
-                    "file": path,
-                    "alert": alert.get("alert"),
-                    "url": alert.get("url")
-                  })
+          highs = []
+          for r in reports:
+              with open(r, encoding="utf-8") as f:
+                  data = json.load(f)
+              for site in data.get("site", []):
+                  for alert in site.get("alerts", []):
+                      if alert.get("risk", "").lower() == "high":
+                          highs.append((alert.get("alert"), alert.get("url")))
 
-          if high_hits:
-            print("High severity ZAP alerts found:")
-            for hit in high_hits:
-              print(f"- {hit['alert']} ({hit['url']}) [{hit['file']}] ")
-            sys.exit(1)
+          if highs:
+              print("High severity vulnerabilities found:")
+              for h in highs:
+                  print(f"- {h[0]} at {h[1]}")
+              sys.exit(1)
 
-          print("No High severity ZAP alerts found.")
+          print("DAST policy gate passed: no High severity issues found.")
           PY
 
-      # Step 12: Upload ZAP reports as artifacts
+      # Step 8: Upload all reports (single artifact container)
       - name: Upload DAST reports
         uses: actions/upload-artifact@v4
         if: always()
@@ -172,22 +120,9 @@ jobs:
             zap-*.html
             zap-*.json
             zap-*.md
-            zap-*.xml
 
-      # Step 13: Display scan summary
-      - name: ZAP Scan Summary
+      # Step 9: Cleanup
+      - name: Stop services
         if: always()
         run: |
-          echo "=== DAST Scan Completed ==="
-          echo "Reports have been generated and uploaded as artifacts"
-          echo "Check the Actions artifacts for detailed findings"
-
-      # Step 14: Cleanup - Stop all services
-      - name: Stop all services
-        if: always()
-        run: |
-          # Stop Python services
-          if [ -f auth-service/auth.pid ]; then kill $(cat auth-service/auth.pid) 2>/dev/null || true; fi
-          if [ -f ui-gateway/ui.pid ]; then kill $(cat ui-gateway/ui.pid) 2>/dev/null || true; fi
-          # Stop Docker services
           docker compose down -v
