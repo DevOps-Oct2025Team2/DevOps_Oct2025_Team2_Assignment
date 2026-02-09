@@ -43,8 +43,9 @@ jobs:
         uses: zaproxy/action-baseline@v0.12.0
         with:
           target: 'http://localhost:3000'
-          cmd_options: '-a -j -l WARN'
+          cmd_options: '-a -j -l WARN -J zap-ui.json -w zap-ui.md -r zap-ui.html'
           allow_issue_writing: false
+          artifact_name: zap-ui-scan
           upload_artifact: false
 
       # Step 5: ZAP API Scan - Auth Service
@@ -53,8 +54,9 @@ jobs:
         with:
           target: 'auth-service/openapi.yaml'
           format: 'openapi'
-          cmd_options: '-a -j -l WARN'
+          cmd_options: '-a -j -l WARN -J zap-auth.json -w zap-auth.md -r zap-auth.html'
           allow_issue_writing: false
+          artifact_name: zap-auth-scan
           upload_artifact: false
 
       # Step 6: ZAP API Scan - File Service
@@ -63,8 +65,9 @@ jobs:
         with:
           target: 'file-service/openapi.yaml'
           format: 'openapi'
-          cmd_options: '-a -j -l WARN'
+          cmd_options: '-a -j -l WARN -J zap-file.json -w zap-file.md -r zap-file.html'
           allow_issue_writing: false
+          artifact_name: zap-file-scan
           upload_artifact: false
 
       # Step 7: Enforce policy gate (FAIL on High only)
@@ -73,7 +76,7 @@ jobs:
           python - <<'PY'
           import json, glob, sys
 
-          reports = glob.glob("*.json")
+          reports = glob.glob("zap-*.json")
           if not reports:
               print("No ZAP reports found")
               sys.exit(1)
