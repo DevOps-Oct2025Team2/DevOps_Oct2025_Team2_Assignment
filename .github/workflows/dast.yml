@@ -70,12 +70,13 @@ jobs:
 
       # Step 4: ZAP Baseline Scan - UI Gateway
       - name: ZAP Baseline Scan - UI Gateway
-        uses: zaproxy/action-baseline@v0.12.0
+        uses: zaproxy/action-baseline@v0.15.0
         with:
+          token: ${{ secrets.GITHUB_TOKEN }}
           target: 'http://localhost:3000'
           cmd_options: '-a -j -l WARN'
           allow_issue_writing: false
-          artifact_name: zap-ui-scan
+          artifact_name: zap_ui_scan
 
       - name: Capture UI ZAP reports
         run: |
@@ -85,13 +86,14 @@ jobs:
 
       # Step 5: ZAP API Scan - Auth Service
       - name: ZAP API Scan - Auth Service
-        uses: zaproxy/action-api-scan@v0.7.0
+        uses: zaproxy/action-api-scan@v0.10.0
         with:
+          token: ${{ secrets.GITHUB_TOKEN }}
           target: 'auth-service/openapi.yaml'
           format: 'openapi'
           cmd_options: '-a -j -l WARN'
           allow_issue_writing: false
-          artifact_name: zap-auth-scan
+          artifact_name: zap_auth_scan
 
       - name: Capture Auth ZAP reports
         run: |
@@ -101,13 +103,14 @@ jobs:
 
       # Step 6: ZAP API Scan - File Service
       - name: ZAP API Scan - File Service
-        uses: zaproxy/action-api-scan@v0.7.0
+        uses: zaproxy/action-api-scan@v0.10.0
         with:
+          token: ${{ secrets.GITHUB_TOKEN }}
           target: 'file-service/openapi.yaml'
           format: 'openapi'
           cmd_options: '-a -j -l WARN'
           allow_issue_writing: false
-          artifact_name: zap-file-scan
+          artifact_name: zap_file_scan
 
       - name: Capture File ZAP reports
         run: |
