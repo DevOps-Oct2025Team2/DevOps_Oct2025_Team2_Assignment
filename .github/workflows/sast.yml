@@ -85,11 +85,11 @@ jobs:
           secure: false
           username: ${{ secrets.SMTP_USERNAME }}
           password: ${{ secrets.SMTP_PASSWORD }}
-          subject: "[SAST ✅] ${{ github.repository }} @ ${{ github.ref_name }}"
+          subject: "[SAST] ${{ github.repository }} @ ${{ github.ref_name }}"
           to: ${{ secrets.EMAIL_TO }}
           from: "CI Bot <${{ secrets.SMTP_USERNAME }}>"
           body: |
-            SAST (CodeQL): SUCCESS ✅
+            SAST (CodeQL): SUCCESS 
             Repo: ${{ github.repository }}
             Branch: ${{ github.ref_name }}
             Commit: ${{ github.sha }}

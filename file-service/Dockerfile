@@ -41,12 +41,11 @@ COPY . .
 # Required if the service writes files at runtime (e.g. uploaded files)
 RUN mkdir -p /app/uploads && chown -R appuser:appuser /app/uploads
 
-# Drop privileges and run as non-root user
-USER appuser
+# Copy entrypoint
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 
-# Document the port the Flask app listens on
-# (informational but good practice for tooling and IaC)
 EXPOSE 5002
 
-# Start the Flask application
-CMD ["python", "app.py"]
+# Start as root so we can chown mounted volume, then drop privileges in entrypoint
+ENTRYPOINT ["/entrypoint.sh"]

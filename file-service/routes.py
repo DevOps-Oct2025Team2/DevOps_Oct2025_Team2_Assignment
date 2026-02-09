@@ -44,7 +44,6 @@ def dashboard():
             {
                 "id": f.id,
                 "filename": f.filename,
-                "storage_path": f.storage_path,
                 "content_type": f.content_type,
                 "size_bytes": f.size_bytes,
                 "created_at": f.created_at.isoformat(),
@@ -113,7 +112,7 @@ def upload_dashboard_file():
     
     notify_event(
         event_type="upload_success",
-        subject="[Runtime ✅] File Service: Upload successful",
+        subject="[Runtime] File Service: Upload successful",
         body=_email_body("upload_success", 201, user_id, extra=f"filename={saved.filename} size_bytes={saved.size_bytes}"),
         dedupe_key=f"user:{user_id}"
     )
@@ -123,7 +122,6 @@ def upload_dashboard_file():
         "file" : {
             "id": saved.id,
             "filename": saved.filename,
-            "storage_path": saved.storage_path,
             "content_type": saved.content_type,
             "size_bytes": saved.size_bytes,
             "created_at": saved.created_at.isoformat(),

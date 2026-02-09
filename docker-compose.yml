@@ -30,6 +30,7 @@ services:
     container_name: file-service
     environment:
       DATABASE_URL: postgresql+psycopg2://file_user:file_pass@file-db:5432/file_db
+      UPLOAD_DIR: /data/uploads
       # runtime email settings (values come from .env)
       EMAIL_RATE_LIMIT_SECONDS: ${EMAIL_RATE_LIMIT_SECONDS}
       ENABLE_RUNTIME_EMAILS: ${ENABLE_RUNTIME_EMAILS}
@@ -41,6 +42,34 @@ services:
       - file-db
     ports:
       - "5002:5002"
+    volumes: 
+      - file_uploads:/data/uploads
+
+  auth-service:
+    build: ./auth-service
+    container_name: auth-service
+    environment:
+      DATABASE_URL: postgresql+psycopg2://auth_user:auth_pass@auth-db:5432/auth_db
+
+      EMAIL_RATE_LIMIT_SECONDS: ${EMAIL_RATE_LIMIT_SECONDS}
+      EMAIL_RATE_LIMIT_SECONDS_FAILED: ${EMAIL_RATE_LIMIT_SECONDS_FAILED}
+      ENABLE_RUNTIME_EMAILS: ${ENABLE_RUNTIME_EMAILS}
+      SMTP_USERNAME: ${SMTP_USERNAME}
+      SMTP_PASSWORD: ${SMTP_PASSWORD}
+      RUNTIME_EMAIL_TO: ${RUNTIME_EMAIL_TO}
+      EMAIL_FROM: ${EMAIL_FROM}
+
+    depends_on:
+      - auth-db
+    ports:
+      - "5000:5000"
+
+
+  ui-gateway:
+    build: ./ui-gateway
+    container_name: ui-gateway
+    ports:
+      - "3000:3000"
 
   prometheus:
     image: prom/prometheus:latest
@@ -66,3 +95,4 @@ volumes:
   auth_db_data:
   file_db_data:
   grafana_data:
+  file_uploads:

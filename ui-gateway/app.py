@@ -1,6 +1,9 @@
 from flask import Flask, render_template, redirect
+from prometheus_flask_exporter import PrometheusMetrics
 
 app = Flask(__name__)
+metrics = PrometheusMetrics(app)
+metrics.info("service_info", "UI Gateway service", service="ui-gateway")
 
 @app.route("/")
 def home():
@@ -18,5 +21,9 @@ def admin_page():
 def dashboard_page():
     return render_template("dashboard.html")
 
+@app.route("/health", methods=["GET"])
+def health():
+    return {"status": "ok"}
+
 if __name__ == "__main__":
-    app.run(port=3000, debug=True)
+    app.run(host="0.0.0.0", port=3000)

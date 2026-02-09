@@ -6,3 +6,11 @@ scrape_configs:
     metrics_path: /metrics
     static_configs:
       - targets: ["file-service:5002"]
+
+  - job_name: "auth-service"
+    static_configs:
+      - targets: ["auth-service:5000"]
+
+  - job_name: "ui-gateway"
+    static_configs:
+      - targets: ["ui-gateway:3000"]
