@@ -30,6 +30,7 @@ services:
     container_name: file-service
     environment:
       DATABASE_URL: postgresql+psycopg2://file_user:file_pass@file-db:5432/file_db
+      UPLOAD_DIR: /data/uploads
       # runtime email settings (values come from .env)
       EMAIL_RATE_LIMIT_SECONDS: ${EMAIL_RATE_LIMIT_SECONDS}
       ENABLE_RUNTIME_EMAILS: ${ENABLE_RUNTIME_EMAILS}
@@ -41,6 +42,8 @@ services:
       - file-db
     ports:
       - "5002:5002"
+    volumes: 
+      - file_uploads:/data/uploads
 
   auth-service:
     build: ./auth-service
@@ -92,3 +95,4 @@ volumes:
   auth_db_data:
   file_db_data:
   grafana_data:
+  file_uploads:

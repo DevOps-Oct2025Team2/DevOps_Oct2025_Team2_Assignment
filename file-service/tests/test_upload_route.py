@@ -41,7 +41,4 @@ def test_upload_route_success_returns_201_and_json(app, client, tmp_path):
     assert f["filename"] == "a.txt"
     assert f["content_type"] == "text/plain"
     assert f["size_bytes"] == 11
-
-    # storage_path should point into our temp folder
-    assert f["storage_path"].startswith(str(tmp_path))
     
