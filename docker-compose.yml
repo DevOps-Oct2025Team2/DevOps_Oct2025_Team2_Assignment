@@ -31,18 +31,24 @@ services:
     environment:
       DATABASE_URL: postgresql+psycopg2://file_user:file_pass@file-db:5432/file_db
       UPLOAD_DIR: /data/uploads
+
       # runtime email settings (values come from .env)
       EMAIL_RATE_LIMIT_SECONDS: ${EMAIL_RATE_LIMIT_SECONDS}
       ENABLE_RUNTIME_EMAILS: ${ENABLE_RUNTIME_EMAILS}
       SMTP_USERNAME: ${SMTP_USERNAME}
       SMTP_PASSWORD: ${SMTP_PASSWORD}
-      RUNTIME_EMAIL_TO: ${RUNTIME_EMAIL_TO}
       EMAIL_FROM: ${EMAIL_FROM}
+
+      # recipients (granular routing)
+      EMAIL_TEAM: ${EMAIL_TEAM}
+      EMAIL_DEV: ${EMAIL_DEV}
+      EMAIL_QA: ${EMAIL_QA}
+
     depends_on:
       - file-db
     ports:
       - "5002:5002"
-    volumes: 
+    volumes:
       - file_uploads:/data/uploads
 
   auth-service:
@@ -52,18 +58,21 @@ services:
       DATABASE_URL: postgresql+psycopg2://auth_user:auth_pass@auth-db:5432/auth_db
 
       EMAIL_RATE_LIMIT_SECONDS: ${EMAIL_RATE_LIMIT_SECONDS}
-      EMAIL_RATE_LIMIT_SECONDS_FAILED: ${EMAIL_RATE_LIMIT_SECONDS_FAILED}
       ENABLE_RUNTIME_EMAILS: ${ENABLE_RUNTIME_EMAILS}
       SMTP_USERNAME: ${SMTP_USERNAME}
       SMTP_PASSWORD: ${SMTP_PASSWORD}
-      RUNTIME_EMAIL_TO: ${RUNTIME_EMAIL_TO}
       EMAIL_FROM: ${EMAIL_FROM}
+      APP_ENV: ${APP_ENV}
+
+      # recipients (granular routing)
+      EMAIL_TEAM: ${EMAIL_TEAM}
+      EMAIL_DEV: ${EMAIL_DEV}
+      EMAIL_QA: ${EMAIL_QA}
 
     depends_on:
       - auth-db
     ports:
       - "5000:5000"
-
 
   ui-gateway:
     build: ./ui-gateway
