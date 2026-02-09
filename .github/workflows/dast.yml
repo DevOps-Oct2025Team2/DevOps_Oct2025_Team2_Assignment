@@ -44,13 +44,6 @@ jobs:
           target: 'http://localhost:3000'
           cmd_options: '-a -j -l WARN'
           allow_issue_writing: false
-          artifact_name: none
-
-      - name: Rename UI reports
-        run: |
-          mv report_json.json zap-ui.json
-          mv report_md.md zap-ui.md
-          mv report_html.html zap-ui.html
 
       # Step 5: ZAP API Scan - Auth Service
       - name: ZAP API Scan - Auth Service
@@ -60,13 +53,6 @@ jobs:
           format: 'openapi'
           cmd_options: '-a -j -l WARN'
           allow_issue_writing: false
-          artifact_name: none
-
-      - name: Rename Auth API reports
-        run: |
-          mv report_json.json zap-api-auth.json
-          mv report_md.md zap-api-auth.md
-          mv report_html.html zap-api-auth.html
 
       # Step 6: ZAP API Scan - File Service
       - name: ZAP API Scan - File Service
@@ -76,13 +62,6 @@ jobs:
           format: 'openapi'
           cmd_options: '-a -j -l WARN'
           allow_issue_writing: false
-          artifact_name: none
-
-      - name: Rename File API reports
-        run: |
-          mv report_json.json zap-api-file.json
-          mv report_md.md zap-api-file.md
-          mv report_html.html zap-api-file.html
 
       # Step 7: Enforce policy gate (FAIL on High only)
       - name: Enforce High-only DAST policy gate
@@ -90,7 +69,7 @@ jobs:
           python - <<'PY'
           import json, glob, sys
 
-          reports = glob.glob("zap-*.json")
+          reports = glob.glob("*.json")
           if not reports:
               print("No ZAP reports found")
               sys.exit(1)
@@ -112,17 +91,6 @@ jobs:
 
           print("DAST policy gate passed: no High severity issues found.")
           PY
-
-      # Step 8: Upload all reports (single artifact container)
-      - name: Upload DAST reports
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: dast-zap-reports
-          path: |
-            zap-*.html
-            zap-*.json
-            zap-*.md
 
       # Step 9: Cleanup
       - name: Stop services
