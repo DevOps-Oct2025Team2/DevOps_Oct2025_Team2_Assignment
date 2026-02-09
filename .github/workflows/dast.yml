@@ -85,7 +85,7 @@ jobs:
         uses: zaproxy/action-baseline@v0.12.0
         with:
           target: 'http://localhost:3000'
-          cmd_options: '-a -j -l HIGH'
+          cmd_options: '-a -j -l WARN -J zap-ui.json -w zap-ui.md -r zap-ui.html'
           allow_issue_writing: false
           artifact_name: 'zap-baseline-scan'
 
@@ -95,7 +95,7 @@ jobs:
         with:
           target: 'auth-service/openapi.yaml'
           format: 'openapi'
-          cmd_options: '-a -j -l HIGH'
+          cmd_options: '-a -j -l WARN -J zap-api-auth.json -w zap-api-auth.md -r zap-api-auth.html'
           allow_issue_writing: false
           artifact_name: 'zap-api-auth-scan'
 
@@ -105,9 +105,44 @@ jobs:
         with:
           target: 'file-service/openapi.yaml'
           format: 'openapi'
-          cmd_options: '-a -j -l HIGH'
+          cmd_options: '-a -j -l WARN -J zap-api-file.json -w zap-api-file.md -r zap-api-file.html'
           allow_issue_writing: false
           artifact_name: 'zap-api-file-scan'
+
+        # Step 11.5: Fail pipeline on High alerts only
+        - name: Enforce High-only policy gate
+        run: |
+          python - <<'PY'
+          import json
+          import glob
+          import sys
+
+          report_files = sorted(glob.glob("zap-*.json"))
+          if not report_files:
+            print("No ZAP JSON reports found to evaluate.")
+            sys.exit(1)
+
+          high_hits = []
+          for path in report_files:
+            with open(path, "r", encoding="utf-8") as f:
+              data = json.load(f)
+            for site in data.get("site", []):
+              for alert in site.get("alerts", []):
+                if (alert.get("risk") or "").lower() == "high":
+                  high_hits.append({
+                    "file": path,
+                    "alert": alert.get("alert"),
+                    "url": alert.get("url")
+                  })
+
+          if high_hits:
+            print("High severity ZAP alerts found:")
+            for hit in high_hits:
+              print(f"- {hit['alert']} ({hit['url']}) [{hit['file']}]")
+            sys.exit(1)
+
+          print("No High severity ZAP alerts found.")
+          PY
 
       # Step 12: Upload ZAP reports as artifacts
       - name: Upload DAST reports
@@ -116,10 +151,10 @@ jobs:
         with:
           name: dast-zap-reports
           path: |
-            report_html.html
-            report_json.json
-            report_md.md
-            report_xml.xml
+            zap-*.html
+            zap-*.json
+            zap-*.md
+            zap-*.xml
 
       # Step 13: Display scan summary
       - name: ZAP Scan Summary
