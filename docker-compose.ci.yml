@@ -3,3 +3,8 @@ services:
     environment:
       CI: "true"
       JWT_SECRET: "unit-test-secret"
+
+  file-service:
+    environment:
+      TESTING: "true"
+      JWT_SECRET: "unit-test-secret"
