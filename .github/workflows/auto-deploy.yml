@@ -10,6 +10,14 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Create .env file for CI/CD
+        run: |
+          echo "ENABLE_RUNTIME_EMAILS=true" > .env
+          echo "EMAIL_RATE_LIMIT_SECONDS=60" >> .env
+          echo "SMTP_USERNAME=${{ secrets.SMTP_USERNAME }}" >> .env
+          echo "SMTP_PASSWORD=${{ secrets.SMTP_PASSWORD }}" >> .env
+          echo "EMAIL_TO=${{ secrets.RUNTIME_EMAIL_TO }}" >> .env
+          echo "EMAIL_FROM=${{ secrets.EMAIL_FROM }}" >> .env
       - name: Create EC private/public key files
         uses: appleboy/ssh-action@v1
         with:
