@@ -55,7 +55,7 @@ export async function uploadFile(file){
     const formData = new FormData();
     formData.append("file", file); // filed name is "file"
 
-    const resp = await fetch(`${FILE_SERVICE_BASE}/dashboard/upload`, {
+    const resp = await fetch(`${FILE_SERVICE_BASE}/dashboard/submit`, {
         method: "POST",
         headers: buildAuthHeaders(), // Note: Do NOT set Content-Type manually for FormData
         body: formData,
