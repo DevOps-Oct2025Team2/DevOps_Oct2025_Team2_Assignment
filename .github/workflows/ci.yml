@@ -95,6 +95,7 @@ jobs:
             sleep 5
             curl -f http://localhost:3000 || exit 1
 
+
     build-docker:
         name: Build Docker Images
         runs-on: ubuntu-latest
