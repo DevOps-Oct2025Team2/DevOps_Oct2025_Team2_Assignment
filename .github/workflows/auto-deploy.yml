@@ -11,6 +11,7 @@ jobs:
 
     steps:
       - name: Create .env file for CI/CD
+        working-directory: ${{ github.workspace }}
         run: |
           echo "ENABLE_RUNTIME_EMAILS=true" > .env
           echo "EMAIL_RATE_LIMIT_SECONDS=60" >> .env
@@ -24,6 +25,7 @@ jobs:
           echo "APP_ENV=ci" >> .env
 
       - name: Move .env to compose directory
+        working-directory: ${{ github.workspace }}
         run: cp .env docker-compose.yml ./
       - name: Create EC private/public key files
         uses: appleboy/ssh-action@v1
