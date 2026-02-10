@@ -18,6 +18,9 @@ jobs:
           echo "SMTP_PASSWORD=${{ secrets.SMTP_PASSWORD }}" >> .env
           echo "EMAIL_TO=${{ secrets.RUNTIME_EMAIL_TO }}" >> .env
           echo "EMAIL_FROM=${{ secrets.EMAIL_FROM }}" >> .env
+
+      - name: Move .env to compose directory
+        run: cp .env docker-compose.yml ./
       - name: Create EC private/public key files
         uses: appleboy/ssh-action@v1
         with:
