@@ -27,7 +27,7 @@ services:
 
   file-service:
     build: ./file-service
-    container_name: file-service
+    env_file: .env
     environment:
       DATABASE_URL: postgresql+psycopg2://file_user:file_pass@file-db:5432/file_db
       UPLOAD_DIR: /data/uploads
@@ -50,10 +50,11 @@ services:
       - "5002:5002"
     volumes:
       - file_uploads:/data/uploads
+      - ./auth-service/ec_public.pem:/app/ec_public.pem:ro
 
   auth-service:
     build: ./auth-service
-    container_name: auth-service
+    env_file: .env
     environment:
       DATABASE_URL: postgresql+psycopg2://auth_user:auth_pass@auth-db:5432/auth_db
 
@@ -74,12 +75,16 @@ services:
     ports:
       - "5000:5000"
 
-
   ui-gateway:
     build: ./ui-gateway
     container_name: ui-gateway
+    environment:
+      AUTH_SERVICE_URL: http://auth-service:5000
+      FILE_SERVICE_URL: http://file-service:5002
     ports:
       - "3000:3000"
+    depends_on:
+      - auth-service
 
   prometheus:
     image: prom/prometheus:latest
