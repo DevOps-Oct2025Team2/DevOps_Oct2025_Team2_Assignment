@@ -10,6 +10,17 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Create EC private/public key files
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            cd /var/www/your-repo/auth-service
+            echo "${{ secrets.EC_PRIVATE_PEM }}" > ec_private.pem
+            echo "${{ secrets.EC_PUBLIC_PEM }}" > ec_public.pem
+
       - name: Deploy to EC2 via SSH
         uses: appleboy/ssh-action@v1
         with:
