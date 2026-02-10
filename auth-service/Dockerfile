@@ -31,9 +31,6 @@ RUN pip install --no-cache-dir --upgrade pip \
 # Copy the application source code into the container
 COPY . .
 
-# Explicitly copy key files (fixes Windows-Docker permission issues)
-COPY ec_private.pem /app/ec_private.pem
-COPY ec_public.pem /app/ec_public.pem
 
 # Run the application as a non-root user
 USER appuser
