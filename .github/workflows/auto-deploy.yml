@@ -21,3 +21,20 @@ jobs:
             git pull origin main
             sudo systemctl restart backend
             sudo systemctl restart nginx
+
+      - name: Notify deployment via email
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            cd /var/www/your-repo/auth-service
+            export ENABLE_RUNTIME_EMAILS=true
+            export EMAIL_RATE_LIMIT_SECONDS=60
+            export SMTP_USERNAME=${{ secrets.SMTP_USERNAME }}
+            export SMTP_PASSWORD=${{ secrets.SMTP_PASSWORD }}
+            export EMAIL_FROM="Runtime Bot <${{ secrets.SMTP_USERNAME }}>"
+            export EMAIL_TEAM=${{ secrets.RUNTIME_EMAIL_TO }}
+            export APP_ENV=prod
+            python3 notify.py "deploy_success" "Deployment Successful" "The deployment to EC2 was successful."
