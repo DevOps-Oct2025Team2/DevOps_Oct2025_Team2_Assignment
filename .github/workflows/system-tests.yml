@@ -74,6 +74,13 @@ jobs:
         run: npm test
         working-directory: system-tests/auth
 
+      - name: Upload auth system test artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: system-tests-auth
+          path: system-tests/auth
+
       - name: Install dashboard system test dependencies
         run: npm install
         working-directory: system-tests/dashboard
@@ -82,6 +89,13 @@ jobs:
         run: npm test
         working-directory: system-tests/dashboard
 
+      - name: Upload auth system test artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: system-tests-auth
+          path: system-tests/auth
+          
       - name: Stop services
         if: always()
         run: |
