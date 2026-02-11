@@ -31,6 +31,7 @@ RUN pip install --no-cache-dir --upgrade pip \
 # Copy the application source code into the container
 COPY . .
 
+
 # Run the application as a non-root user
 USER appuser
 

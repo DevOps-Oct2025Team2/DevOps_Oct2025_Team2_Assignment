@@ -2,6 +2,6 @@
   const token = localStorage.getItem("access_token");
 
   if (!token) {
-    window.location.href = "/api/login";
+    window.location.href = "/login";
   }
 })();
