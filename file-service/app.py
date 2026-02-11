@@ -46,9 +46,9 @@ def create_app(database_uri=None):
         logging.setLogRecordFactory(record_factory)
 
     configure_logging(app)
-    app.logger.info("logging_ready | enable_metrics=%s", app.config.get("ENABLE_METRICS"))
-
+    
     app.config["ENABLE_METRICS"] = os.getenv("ENABLE_METRICS", "true").lower() == "true"
+    app.logger.info("logging_ready | enable_metrics=%s", app.config.get("ENABLE_METRICS"))
 
     if app.config["ENABLE_METRICS"]:
         metrics = PrometheusMetrics(app)
