@@ -31,7 +31,6 @@ services:
     environment:
       DATABASE_URL: postgresql+psycopg2://file_user:file_pass@file-db:5432/file_db
       UPLOAD_DIR: /data/uploads
-
       # runtime email settings (values come from .env)
       EMAIL_RATE_LIMIT_SECONDS: ${EMAIL_RATE_LIMIT_SECONDS}
       ENABLE_RUNTIME_EMAILS: ${ENABLE_RUNTIME_EMAILS}
