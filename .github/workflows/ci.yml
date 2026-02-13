@@ -36,14 +36,16 @@ jobs:
 
             - name: Run unit tests + coverage
               run: |
-                python -m pytest -v --cov=. --cov-report=term-missing --cov-report=xml:coverage.xml
+                python -m pytest -v --cov=. --cov-report=term-missing --cov-report=xml:coverage.xml --cov-report=html:htmlcov
 
             - name: Upload coverage report
               if: always()
               uses: actions/upload-artifact@v4
               with:
                 name: coverage-auth-service
-                path: auth-service/coverage.xml
+                path: |
+                  auth-service/coverage.xml
+                  auth-service/htmlcov
                 
     test-file:
         name: Test file-service
@@ -75,14 +77,16 @@ jobs:
 
             - name: Run unit tests + coverage
               run: |
-                python -m pytest -v --cov=. --cov-report=term-missing --cov-report=xml:coverage.xml
+                python -m pytest -v --cov=. --cov-report=term-missing --cov-report=xml:coverage.xml --cov-report=html:htmlcov
 
             - name: Upload coverage report
               if: always()
               uses: actions/upload-artifact@v4
               with:
                 name: coverage-file-service
-                path: file-service/coverage.xml
+                path: |
+                  file-service/coverage.xml
+                  file-service/htmlcov
 
     test-ui:
       name: Check UI Gateway
