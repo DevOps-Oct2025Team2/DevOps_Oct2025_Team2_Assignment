@@ -71,3 +71,4 @@ def send_email_smtp(to_addr: str, subject: str, body: str) -> None:
         server.starttls()
         server.login(smtp_user, smtp_pass)
         server.send_message(msg)
+
