@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.2.0](https://github.com/DevOps-Oct2025Team2/DevOps_Oct2025_Team2_Assignment-/compare/v1.1.0...v1.2.0) (2026-02-09)
+
+
+### Features
+
+* add DAST scan in CI Pipelinne ([#75](https://github.com/DevOps-Oct2025Team2/DevOps_Oct2025_Team2_Assignment-/issues/75)) ([81cc499](https://github.com/DevOps-Oct2025Team2/DevOps_Oct2025_Team2_Assignment-/commit/81cc499306c142fa361959af8ad925961b438558))
+
+
+### Bug Fixes
+
+* resolve release please tag creation ([#76](https://github.com/DevOps-Oct2025Team2/DevOps_Oct2025_Team2_Assignment-/issues/76)) ([4c7f722](https://github.com/DevOps-Oct2025Team2/DevOps_Oct2025_Team2_Assignment-/commit/4c7f7225f1983a7e2ad1f1b2729c58bb7b2ac74d))
+
 ## [1.1.0](https://github.com/DevOps-Oct2025Team2/DevOps_Oct2025_Team2_Assignment-/compare/v1.0.0...v1.1.0) (2026-02-09)
 
 

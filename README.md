@@ -461,3 +461,4 @@ This project uses JSON Web Tokens (JWT) for authentication and authorization acr
 - **Testing & CI:** Uses **HS256** to simplify setup and ensure fast, reliable automated testing.
 This design balances strong production security with efficient local development and CI pipelines.
 
+
