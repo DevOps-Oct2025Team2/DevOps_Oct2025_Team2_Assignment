@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.0](https://github.com/DevOps-Oct2025Team2/DevOps_Oct2025_Team2_Assignment-/compare/v1.0.0...v1.1.0) (2026-02-09)
+
+
+### Features
+
+* add DAST scan to CI Pipeline ([#72](https://github.com/DevOps-Oct2025Team2/DevOps_Oct2025_Team2_Assignment-/issues/72)) ([bc7b4ef](https://github.com/DevOps-Oct2025Team2/DevOps_Oct2025_Team2_Assignment-/commit/bc7b4ef4dab3b95259a8754f92ebedafa84dba8d))
+
 ## 1.0.0 (2026-02-06)
 
 

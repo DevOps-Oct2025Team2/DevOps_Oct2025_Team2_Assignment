@@ -1,8 +1,7 @@
 import os
-from flask import Blueprint, request, jsonify, send_file
+from flask import Blueprint, request, jsonify, send_file, current_app
 from models import File
 from dashboard import get_files_for_user, delete_file_for_user, get_file_for_download
-from flask import current_app #The Flask app that is handling this request right now
 from upload import save_upload_for_user
 from auth import get_authenticated_user_id
 from notify import notify_event
@@ -34,6 +33,7 @@ def dashboard():
             body=f"event=dashboard_unauthorized status=401 method={request.method} path={request.path} ip={request.remote_addr}",
             dedupe_key=request.remote_addr or "unknown"
         )
+        current_app.logger.warning("dashboard_unauthorized | ip=%s", request.remote_addr)
         return jsonify({"error": "Unauthorized"}), 401
 
     # AC-DASH-03/04: server-enforced ownership filtering + empty list is OK
@@ -65,7 +65,7 @@ def upload_dashboard_file():
             body=_email_body("upload_unauthorized", 401),
             dedupe_key=request.remote_addr or "unknown"
         )
-
+        current_app.logger.warning("upload_unauthorized | ip=%s", request.remote_addr)
         return jsonify({"error": "Unauthorized"}), 401
     
     # Uploaded files are sent via multipart/form-data
@@ -78,6 +78,7 @@ def upload_dashboard_file():
             body=f"user_id={user_id} status=400 ip={request.remote_addr}",
             dedupe_key=request.remote_addr or "unknown"
         )
+        current_app.logger.warning("upload_missing_file | user_id=%s ip=%s", user_id, request.remote_addr)
         return jsonify({"error": "No file provided"}), 400
     
     # This is a Werkzeug FileStorage object (has .filename, .content_type, .stream, etc.)
@@ -100,7 +101,7 @@ def upload_dashboard_file():
     except ValueError as e:
         # AC-FILE-02: reject invalid upload, no persistence
         # Log internal error details server-side without exposing them to the client
-        current_app.logger.warning("Upload validation failed: %s", e)
+        current_app.logger.warning("upload_invalid | user_id=%s error=%s", user_id, str(e))
         notify_event(
             event_type="upload_invalid",
             subject="Upload rejected",
@@ -110,6 +111,13 @@ def upload_dashboard_file():
 
         return jsonify({"error": "Invalid upload"}), 400
     
+    current_app.logger.info(
+        "upload_success | user_id=%s file_id=%s filename=%s size_bytes=%s",
+        user_id,
+        saved.id,
+        saved.filename,
+        saved.size_bytes,
+    )
     notify_event(
         event_type="upload_success",
         subject="[Runtime] File Service: Upload successful",
@@ -148,8 +156,10 @@ def delete_file(file_id: int):
             body=f"event=delete_not_found status=404 method={request.method} path={request.path} user_id={user_id} file_id={file_id} ip={request.remote_addr}",
             dedupe_key=request.remote_addr or "unknown"
         )
+        current_app.logger.warning("delete_not_found | user_id=%s file_id=%s", user_id, file_id)
         return jsonify({"error": "Not found"}), 404
     
+    current_app.logger.info("delete_success | user_id=%s file_id=%s", user_id, file_id)
     return jsonify({"message":"File deleted successfully"}), 200
 
 @bp.get("/dashboard/download/<int:file_id>")
@@ -162,6 +172,7 @@ def download_file(file_id: int):
             body=f"event=download_unauthorized status=401 method={request.method} path={request.path} file_id={file_id} ip={request.remote_addr}",
             dedupe_key=request.remote_addr or "unknown"
         )
+        current_app.logger.warning("download_not_found | user_id=%s file_id=%s", user_id, file_id)
         return jsonify({"error": "Unauthorized"}), 401
     
     f = get_file_for_download(user_id, file_id)
@@ -193,4 +204,5 @@ def test_crash():
         body=_email_body("ops_test_crash", 500, extra="note=intentional crash endpoint"),
         dedupe_key=request.remote_addr or "unknown",
     )
+    current_app.logger.error("ops_test_crash | ip=%s", request.remote_addr)
     raise RuntimeError("Intentional crash for testing/demo")

@@ -14,25 +14,47 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+
       - name: Create .env file for CI
         run: |
-          echo "ENABLE_RUNTIME_EMAILS=true" > .env
-          echo "EMAIL_RATE_LIMIT_SECONDS=60" >> .env
-          echo "SMTP_USERNAME=${{ secrets.SMTP_USERNAME }}" >> .env
-          echo "SMTP_PASSWORD=${{ secrets.SMTP_PASSWORD }}" >> .env
-          echo "EMAIL_FROM=${{ secrets.EMAIL_FROM }}" >> .env
-          echo "EMAIL_TEAM=${{ secrets.EMAIL_TEAM }}" >> .env
-          echo "EMAIL_QA=${{ secrets.EMAIL_QA }}" >> .env
-          echo "EMAIL_DEV=${{ secrets.EMAIL_DEV }}" >> .env
-          echo "RELEASE_EMAIL_TO=${{ secrets.RELEASE_EMAIL_TO }}" >> .env
-          echo "APP_ENV=ci" >> .env
+          echo "EMAIL_QA=${EMAIL_QA:-qa@example.com}" > .env
+          echo "ENABLE_RUNTIME_EMAILS=${ENABLE_RUNTIME_EMAILS:-true}" >> .env
+          echo "SMTP_USERNAME=${SMTP_USERNAME:-user}" >> .env
+          echo "SMTP_PASSWORD=${SMTP_PASSWORD:-password}" >> .env
+          echo "EMAIL_FROM=${EMAIL_FROM:-from@example.com}" >> .env
+          echo "EMAIL_DEV=${EMAIL_DEV:-dev@example.com}" >> .env
+          echo "EMAIL_TEAM=${EMAIL_TEAM:-team@example.com}" >> .env
+          echo "EMAIL_RATE_LIMIT_SECONDS=${EMAIL_RATE_LIMIT_SECONDS:-60}" >> .env
+          echo "APP_ENV=${APP_ENV:-ci}" >> .env
+        env:
+          EMAIL_QA: ${{ secrets.EMAIL_QA }}
+          ENABLE_RUNTIME_EMAILS: ${{ secrets.ENABLE_RUNTIME_EMAILS }}
+          SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
+          EMAIL_DEV: ${{ secrets.EMAIL_DEV }}
+          EMAIL_TEAM: ${{ secrets.EMAIL_TEAM }}
+          EMAIL_RATE_LIMIT_SECONDS: ${{ secrets.EMAIL_RATE_LIMIT_SECONDS }}
+          APP_ENV: ${{ secrets.APP_ENV }}
         working-directory: ${{ github.workspace }}
+
+      - name: "Debug: List files in workspace"
+        run: |
+          ls -al
+          echo "\nContents of .env file:" && cat .env
+        working-directory: ${{ github.workspace }}
+
+      - name: Create ec_private.pem from secret
+        run: |
+          echo "${{ secrets.EC_PRIVATE_PEM }}" > ec_private.pem
+        working-directory: ${{ github.workspace }}/auth-service
 
       - name: Start services with Docker Compose
         run: |
           docker compose -f docker-compose.yml -f docker-compose.ci.yml up -d --build
           echo "Waiting for services to initialise..."
           sleep 20
+        working-directory: ${{ github.workspace }}
 
       - name: Check service health
         run: |
@@ -88,6 +110,13 @@ jobs:
         run: npm test
         working-directory: system-tests/auth
 
+      - name: Upload auth system test artifacts (pre-dashboard)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: system-tests-auth-pre-dashboard-${{ github.run_id }}-${{ github.job }}
+          path: system-tests/auth
+
       - name: Install dashboard system test dependencies
         run: npm install
         working-directory: system-tests/dashboard
@@ -96,6 +125,13 @@ jobs:
         run: npm test
         working-directory: system-tests/dashboard
 
+      - name: Upload auth system test artifacts (post-dashboard)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: system-tests-auth-post-dashboard-${{ github.run_id }}-${{ github.job }}
+          path: system-tests/auth
+          
       - name: Stop services
         if: always()
         run: |
