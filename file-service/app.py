@@ -102,28 +102,27 @@ def create_app(database_uri=None):
 
     @app.errorhandler(Exception)
     def handle_unhandled_exception(e):
+        print("UNHANDLED ERROR:", repr(e))
+
         if isinstance(e, HTTPException):
             return e
 
-        method = _sanitize_for_log(request.method)
-        path = _sanitize_for_log(request.path)
-        ip = _sanitize_for_log(request.remote_addr)
-
-        app.logger.exception("unhandled_exception | method=%s path=%s", method, path)
-
-        notify_event(
-            event_type="server_error",
-            dedupe_key=f"{method}:{path}:{ip}",
-            subject="Unhandled exception (500)",
-            body=(
-                f"ts={datetime.now(timezone.utc).isoformat()} "
-                f"service={os.getenv('SERVICE_NAME','file-service')} "
-                f"event=server_error status=500 "
-                f"method={method} path={path} "
-                f"ip={ip} "
-                f"error={type(e).__name__}"
-            ),
-        )
+        try:
+            notify_event(
+                event_type="server_error",
+                dedupe_key=f"{request.method}:{request.path}:{request.remote_addr}",
+                subject="Unhandled exception (500)",
+                body=(
+                    f"ts={datetime.now(timezone.utc).isoformat()} "
+                    f"service={os.getenv('SERVICE_NAME')} "
+                    f"event=server_error status=500 "
+                    f"method={request.method} path={request.path} "
+                    f"ip={request.remote_addr} "
+                    f"error={type(e).__name__}"
+                ),
+            )
+        except Exception as notify_err:
+            print("ERROR SENDING ERROR EMAIL:", repr(notify_err))
 
         return jsonify({"error": "Internal Server Error"}), 500
 
