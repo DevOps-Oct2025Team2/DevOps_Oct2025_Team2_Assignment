@@ -28,7 +28,7 @@ jobs:
           script: |
             set -e
 
-            APP_DIR="/home/ubuntu/DevOps_Oct2025_Team2_Assignment-"
+            APP_DIR="/home/ubuntu/DevOps_Oct2025_Team2_Assignment"
             SERVICE_DIR="$APP_DIR/auth-service"
 
             cd $APP_DIR
