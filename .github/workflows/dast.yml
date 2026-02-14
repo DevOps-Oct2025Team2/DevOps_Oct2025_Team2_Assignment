@@ -1,0 +1,214 @@
+# DAST - Dynamic Application Security Testing with OWASP ZAP
+name: DAST - OWASP ZAP Security Scan
+
+on:
+  push:
+    branches: [ main, qa/qa, dev ]
+  pull_request:
+    branches: [ main, qa/qa, dev ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write
+  issues: write
+  actions: write
+
+jobs:
+  dast-scan:
+    name: OWASP ZAP DAST Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Checkout source code
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Step 2: Start services
+      - name: Start services with Docker Compose
+        run: |
+          docker compose -f docker-compose.yml -f docker-compose.ci.yml up -d
+          echo "Waiting for services to initialise..."
+          sleep 20
+
+      # Step 3: Verify services are running
+      - name: Check service health
+        run: |
+          set -e
+          max_wait=90
+          interval=5
+          elapsed=0
+
+          echo "Waiting for services to become healthy (max ${max_wait}s)..."
+          while [ $elapsed -lt $max_wait ]; do
+            auth_ok=0
+            file_ok=0
+            ui_ok=0
+
+            docker compose -f docker-compose.yml -f docker-compose.ci.yml exec -T auth-service python -c "import urllib.request as u; u.urlopen('http://localhost:5000/health', timeout=2).read()" >/dev/null 2>&1 && auth_ok=1 || true
+            docker compose -f docker-compose.yml -f docker-compose.ci.yml exec -T file-service python -c "import urllib.request as u; u.urlopen('http://localhost:5002/health', timeout=2).read()" >/dev/null 2>&1 && file_ok=1 || true
+            docker compose -f docker-compose.yml -f docker-compose.ci.yml exec -T ui-gateway python -c "import urllib.request as u; u.urlopen('http://localhost:3000/health', timeout=2).read()" >/dev/null 2>&1 && ui_ok=1 || true
+
+            if [ $auth_ok -eq 1 ] && [ $file_ok -eq 1 ] && [ $ui_ok -eq 1 ]; then
+              echo "All services are healthy."
+              exit 0
+            fi
+
+            echo "Not ready yet... auth=${auth_ok} file=${file_ok} ui=${ui_ok}. Retrying in ${interval}s."
+            sleep $interval
+            elapsed=$((elapsed + interval))
+          done
+
+          echo "Services did not become healthy within ${max_wait}s."
+          echo "--- docker compose ps ---"
+          docker compose -f docker-compose.yml -f docker-compose.ci.yml ps
+          echo "--- auth-service logs (last 200 lines) ---"
+          docker compose -f docker-compose.yml -f docker-compose.ci.yml logs --tail=200 auth-service
+          echo "--- auth-service /health debug ---"
+          docker compose -f docker-compose.yml -f docker-compose.ci.yml exec -T auth-service python -c "import urllib.request as u; resp=u.urlopen('http://localhost:5000/health', timeout=2); print('status', resp.status); print(resp.read().decode('utf-8', errors='ignore'))" || true
+          exit 1
+
+      # Step 4: ZAP Baseline Scan - UI Gateway
+      - name: ZAP Baseline Scan - UI Gateway
+        uses: zaproxy/action-baseline@v0.15.0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          target: 'http://localhost:3000'
+          cmd_options: '-a -j -l WARN'
+          allow_issue_writing: false
+          artifact_name: zap_ui_scan
+
+      - name: Capture UI ZAP reports
+        run: |
+          mv report_json.json zap-ui.json
+          mv report_md.md zap-ui.md
+          mv report_html.html zap-ui.html
+
+      # Step 5: ZAP API Scan - Auth Service
+      - name: ZAP API Scan - Auth Service
+        uses: zaproxy/action-api-scan@v0.10.0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          target: 'auth-service/openapi.yaml'
+          format: 'openapi'
+          cmd_options: '-a -j -l WARN'
+          allow_issue_writing: false
+          artifact_name: zap_auth_scan
+
+      - name: Capture Auth ZAP reports
+        run: |
+          mv report_json.json zap-auth.json
+          mv report_md.md zap-auth.md
+          mv report_html.html zap-auth.html
+
+      # Step 6: ZAP API Scan - File Service
+      - name: ZAP API Scan - File Service
+        uses: zaproxy/action-api-scan@v0.10.0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          target: 'file-service/openapi.yaml'
+          format: 'openapi'
+          cmd_options: '-a -j -l WARN'
+          allow_issue_writing: false
+          artifact_name: zap_file_scan
+
+      - name: Capture File ZAP reports
+        run: |
+          mv report_json.json zap-file.json
+          mv report_md.md zap-file.md
+          mv report_html.html zap-file.html
+
+      # Step 7: Enforce policy gate (FAIL on High only)
+      - name: Enforce High-only DAST policy gate
+        run: |
+          python - <<'PY'
+          import json, glob, sys
+
+          reports = glob.glob("zap-*.json")
+          if not reports:
+              print("No ZAP reports found")
+              sys.exit(1)
+
+          highs = []
+          for r in reports:
+              with open(r, encoding="utf-8") as f:
+                  data = json.load(f)
+              for site in data.get("site", []):
+                  for alert in site.get("alerts", []):
+                      if alert.get("risk", "").lower() == "high":
+                          highs.append((alert.get("alert"), alert.get("url")))
+
+          if highs:
+              print("High severity vulnerabilities found:")
+              for h in highs:
+                  print(f"- {h[0]} at {h[1]}")
+              sys.exit(1)
+
+          print("DAST policy gate passed: no High severity issues found.")
+          PY
+
+      #Step 9: Upload reports
+      - name: Upload DAST reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: dast-zap-reports
+          path: |
+            *.html
+            *.json
+            *.md
+
+      # Step 10: Cleanup
+      - name: Stop services
+        if: always()
+        run: |
+          docker compose -f docker-compose.yml -f docker-compose.ci.yml down -v
+
+  notify-qa:
+    name: Notify QA (DAST Email)
+    runs-on: ubuntu-latest
+    needs: [dast-scan]
+    if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Send SUCCESS email (DAST)
+        if: needs.dast-scan.result == 'success'
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          secure: false
+          username: ${{ secrets.SMTP_USERNAME }}
+          password: ${{ secrets.SMTP_PASSWORD }}
+          subject: "[DAST] ${{ github.repository }} @ ${{ github.ref_name }}"
+          to: ${{ secrets.EMAIL_QA }}
+          from: "CI Bot <${{ secrets.SMTP_USERNAME }}>"
+          body: |
+            DAST (OWASP ZAP): SUCCESS
+            Repo: ${{ github.repository }}
+            Branch: ${{ github.ref_name }}
+            Commit: ${{ github.sha }}
+            Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+      - name: Send FAILURE email (DAST)
+        if: needs.dast-scan.result != 'success'
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          secure: false
+          username: ${{ secrets.SMTP_USERNAME }}
+          password: ${{ secrets.SMTP_PASSWORD }}
+          subject: "[DAST] ${{ github.repository }} @ ${{ github.ref_name }}"
+          to: ${{ secrets.EMAIL_QA }}
+          from: "CI Bot <${{ secrets.SMTP_USERNAME }}>"
+          body: |
+            DAST (OWASP ZAP): FAILURE
+            Repo: ${{ github.repository }}
+            Branch: ${{ github.ref_name }}
+            Commit: ${{ github.sha }}
+            Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+            Job result:
+              - dast-scan: ${{ needs.dast-scan.result }}
+

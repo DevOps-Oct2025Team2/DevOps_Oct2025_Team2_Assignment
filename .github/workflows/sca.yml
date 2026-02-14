@@ -1,0 +1,104 @@
+name: SCA - Dependency Vulnerability Scan
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  sca:
+    name: Software Composition Analysis
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Checkout source code
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      # Step 2: Install system test dependencies to generate lockfiles
+      - name: Install system test dependencies
+        run: |
+          cd system-tests/auth
+          npm install
+          cd ../dashboard
+          npm install
+
+      # Step 3: Run OWASP Dependency-Check (ALL formats)
+      - name: Run OWASP Dependency-Check
+        uses: dependency-check/Dependency-Check_Action@main
+        with:
+          project: "DevOps-Team2-SCA"
+          path: "."
+          format: "ALL"          # HTML, JSON, XML, CSV, SARIF
+          out: "reports"
+          args: >
+            --failOnCVSS 7
+            --enableRetired
+
+      # Step 4: Upload reports as artifacts
+      - name: Upload SCA reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sca-reports
+          path: reports/
+
+      # Step 5: Upload SARIF to GitHub Security tab
+      - name: Upload SARIF to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: always() && hashFiles('reports/dependency-check-report.sarif') != ''
+        with:
+          sarif_file: reports/dependency-check-report.sarif
+          category: sca
+
+  notify-stakeholders:
+    name: Notify QA (Email)
+    runs-on: ubuntu-latest
+    needs: [sca]
+    if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Send SUCCESS email (SCA)
+        if: needs.sca.result == 'success'
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          secure: false
+          username: ${{ secrets.SMTP_USERNAME }}
+          password: ${{ secrets.SMTP_PASSWORD }}
+          subject: "[SCA] ${{ github.repository }} @ ${{ github.ref_name }}"
+          to: ${{ secrets.EMAIL_QA }}
+          from: "CI Bot <${{ secrets.SMTP_USERNAME }}>"
+          body: |
+            SCA (Dependency-Check): SUCCESS
+            Repo: ${{ github.repository }}
+            Branch: ${{ github.ref_name }}
+            Commit: ${{ github.sha }}
+            Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+      - name: Send FAILURE email (SCA)
+        if: needs.sca.result != 'success'
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          secure: false
+          username: ${{ secrets.SMTP_USERNAME }}
+          password: ${{ secrets.SMTP_PASSWORD }}
+          subject: "[SCA] ${{ github.repository }} @ ${{ github.ref_name }}"
+          to: ${{ secrets.EMAIL_QA }}
+          from: "CI Bot <${{ secrets.SMTP_USERNAME }}>"
+          body: |
+            SCA (Dependency-Check): FAILURE
+            Repo: ${{ github.repository }}
+            Branch: ${{ github.ref_name }}
+            Commit: ${{ github.sha }}
+            Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+            Job result:
+            - sca: ${{ needs.sca.result }}
+

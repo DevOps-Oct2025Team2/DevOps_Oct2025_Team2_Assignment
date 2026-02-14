@@ -1,0 +1,116 @@
+name: System Acceptance Tests
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  system-tests:
+    name: System Acceptance Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create .env file for CI
+        run: |
+          echo "ENABLE_RUNTIME_EMAILS=true" > .env
+          echo "EMAIL_RATE_LIMIT_SECONDS=60" >> .env
+          echo "SMTP_USERNAME=${{ secrets.SMTP_USERNAME }}" >> .env
+          echo "SMTP_PASSWORD=${{ secrets.SMTP_PASSWORD }}" >> .env
+          echo "EMAIL_FROM=${{ secrets.EMAIL_FROM }}" >> .env
+          echo "EMAIL_TEAM=${{ secrets.EMAIL_TEAM }}" >> .env
+          echo "EMAIL_QA=${{ secrets.EMAIL_QA }}" >> .env
+          echo "EMAIL_DEV=${{ secrets.EMAIL_DEV }}" >> .env
+          echo "RELEASE_EMAIL_TO=${{ secrets.RELEASE_EMAIL_TO }}" >> .env
+          echo "APP_ENV=ci" >> .env
+        working-directory: ${{ github.workspace }}
+
+      - name: Start services with Docker Compose
+        run: |
+          docker compose -f docker-compose.yml -f docker-compose.ci.yml up -d --build
+          echo "Waiting for services to initialise..."
+          sleep 20
+
+      - name: Check service health
+        run: |
+          set -e
+          max_wait=90
+          interval=5
+          elapsed=0
+
+          echo "Waiting for services to become healthy (max ${max_wait}s)..."
+          while [ $elapsed -lt $max_wait ]; do
+            auth_ok=0
+            file_ok=0
+            ui_ok=0
+
+            docker compose -f docker-compose.yml -f docker-compose.ci.yml exec -T auth-service python -c "import urllib.request as u; u.urlopen('http://localhost:5000/health', timeout=2).read()" >/dev/null 2>&1 && auth_ok=1 || true
+            docker compose -f docker-compose.yml -f docker-compose.ci.yml exec -T file-service python -c "import urllib.request as u; u.urlopen('http://localhost:5002/health', timeout=2).read()" >/dev/null 2>&1 && file_ok=1 || true
+            docker compose -f docker-compose.yml -f docker-compose.ci.yml exec -T ui-gateway python -c "import urllib.request as u; u.urlopen('http://localhost:3000/health', timeout=2).read()" >/dev/null 2>&1 && ui_ok=1 || true
+
+            if [ $auth_ok -eq 1 ] && [ $file_ok -eq 1 ] && [ $ui_ok -eq 1 ]; then
+              echo "All services are healthy."
+              exit 0
+            fi
+
+            echo "Not ready yet... auth=${auth_ok} file=${file_ok} ui=${ui_ok}. Retrying in ${interval}s."
+            sleep $interval
+            elapsed=$((elapsed + interval))
+          done
+
+          echo "Services did not become healthy within ${max_wait}s."
+          docker compose -f docker-compose.yml -f docker-compose.ci.yml ps
+          docker compose -f docker-compose.yml -f docker-compose.ci.yml logs --tail=200 auth-service
+          exit 1
+
+      - name: Run DB migrations
+        run: |
+          docker compose -f docker-compose.yml -f docker-compose.ci.yml exec -T auth-service sh -c "python -m flask --app app db upgrade"
+          docker compose -f docker-compose.yml -f docker-compose.ci.yml exec -T file-service sh -c "python -m flask --app app db upgrade"
+
+      - name: Seed sample users
+        run: |
+          docker compose -f docker-compose.yml -f docker-compose.ci.yml exec -T auth-service python sample_users.py
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install auth system test dependencies
+        run: npm install
+        working-directory: system-tests/auth
+
+      - name: Run auth system tests
+        run: npm test
+        working-directory: system-tests/auth
+
+      - name: Upload auth system test artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: system-tests-auth
+          path: system-tests/auth
+
+      - name: Install dashboard system test dependencies
+        run: npm install
+        working-directory: system-tests/dashboard
+
+      - name: Run dashboard system tests
+        run: npm test
+        working-directory: system-tests/dashboard
+
+      - name: Upload auth system test artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: system-tests-auth
+          path: system-tests/auth
+          
+      - name: Stop services
+        if: always()
+        run: |
+          docker compose -f docker-compose.yml -f docker-compose.ci.yml down -v

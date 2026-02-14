@@ -1,0 +1,6 @@
+{
+    "release-type": "simple",
+    "package-name": "devops-oct2025-team2-assignment",
+    "include-v-in-tag": true,
+    "pull-request-title-pattern": "chore\\(release\\): v${version}"
+}

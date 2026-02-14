@@ -25,6 +25,88 @@ services:
     volumes:
       - file_db_data:/var/lib/postgresql/data
 
+  file-service:
+    build: ./file-service
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+psycopg2://file_user:file_pass@file-db:5432/file_db
+      UPLOAD_DIR: /data/uploads
+      # runtime email settings (values come from .env)
+      EMAIL_RATE_LIMIT_SECONDS: ${EMAIL_RATE_LIMIT_SECONDS}
+      ENABLE_RUNTIME_EMAILS: ${ENABLE_RUNTIME_EMAILS}
+      SMTP_USERNAME: ${SMTP_USERNAME}
+      SMTP_PASSWORD: ${SMTP_PASSWORD}
+      EMAIL_FROM: ${EMAIL_FROM}
+
+      # recipients (granular routing)
+      EMAIL_TEAM: ${EMAIL_TEAM}
+      EMAIL_DEV: ${EMAIL_DEV}
+      EMAIL_QA: ${EMAIL_QA}
+
+    depends_on:
+      - file-db
+    ports:
+      - "5002:5002"
+    volumes:
+      - file_uploads:/data/uploads
+      - ./auth-service/ec_public.pem:/app/ec_public.pem:ro
+
+  auth-service:
+    build: ./auth-service
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+psycopg2://auth_user:auth_pass@auth-db:5432/auth_db
+
+      EMAIL_RATE_LIMIT_SECONDS: ${EMAIL_RATE_LIMIT_SECONDS}
+      ENABLE_RUNTIME_EMAILS: ${ENABLE_RUNTIME_EMAILS}
+      SMTP_USERNAME: ${SMTP_USERNAME}
+      SMTP_PASSWORD: ${SMTP_PASSWORD}
+      EMAIL_FROM: ${EMAIL_FROM}
+      APP_ENV: ${APP_ENV}
+
+      # recipients (granular routing)
+      EMAIL_TEAM: ${EMAIL_TEAM}
+      EMAIL_DEV: ${EMAIL_DEV}
+      EMAIL_QA: ${EMAIL_QA}
+
+    depends_on:
+      - auth-db
+    ports:
+      - "5000:5000"
+
+  ui-gateway:
+    build: ./ui-gateway
+    container_name: ui-gateway
+    environment:
+      AUTH_SERVICE_URL: http://auth-service:5000
+      FILE_SERVICE_URL: http://file-service:5002
+    ports:
+      - "3000:3000"
+    depends_on:
+      - auth-service
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    volumes:
+      - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+    depends_on:
+      - file-service
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3001:3000"
+    depends_on:
+      - prometheus
+    volumes:
+    - grafana_data:/var/lib/grafana
+
 volumes:
   auth_db_data:
   file_db_data:
+  grafana_data:
+  file_uploads:
