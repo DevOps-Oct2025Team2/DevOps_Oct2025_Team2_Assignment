@@ -14,6 +14,20 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Create .env file for CI
+        run: |
+          echo "ENABLE_RUNTIME_EMAILS=true" > .env
+          echo "EMAIL_RATE_LIMIT_SECONDS=60" >> .env
+          echo "SMTP_USERNAME=${{ secrets.SMTP_USERNAME }}" >> .env
+          echo "SMTP_PASSWORD=${{ secrets.SMTP_PASSWORD }}" >> .env
+          echo "EMAIL_FROM=${{ secrets.EMAIL_FROM }}" >> .env
+          echo "EMAIL_TEAM=${{ secrets.EMAIL_TEAM }}" >> .env
+          echo "EMAIL_QA=${{ secrets.EMAIL_QA }}" >> .env
+          echo "EMAIL_DEV=${{ secrets.EMAIL_DEV }}" >> .env
+          echo "RELEASE_EMAIL_TO=${{ secrets.RELEASE_EMAIL_TO }}" >> .env
+          echo "APP_ENV=ci" >> .env
+        working-directory: ${{ github.workspace }}
+
       - name: Start services with Docker Compose
         run: |
           docker compose -f docker-compose.yml -f docker-compose.ci.yml up -d --build
