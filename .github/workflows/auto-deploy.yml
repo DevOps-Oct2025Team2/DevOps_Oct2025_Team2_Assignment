@@ -54,8 +54,8 @@ jobs:
             EOF
 
             # Restart services
-            docker compose down
-            docker compose up -d --build
+            docker-compose down
+            docker-compose up -d --build
 
             # Wait for service to initialise
             sleep 15
@@ -67,8 +67,8 @@ jobs:
               echo "Health check failed. Rolling back."
 
               git reset --hard $(cat .previous_commit)
-              docker compose down
-              docker compose up -d --build
+              docker-compose down
+              docker-compose up -d --build
 
               exit 1
             fi
@@ -94,6 +94,7 @@ jobs:
             Branch: main
             Commit: ${{ github.sha }}
 
+      # Gmail daily sending limit exceeded. Consider switching to another SMTP provider (e.g., Outlook, SendGrid, Mailgun) and update credentials below.
       - name: Send Failure Email
         if: failure()
         uses: dawidd6/action-send-mail@v3
