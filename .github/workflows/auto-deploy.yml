@@ -1,46 +1,25 @@
-name: Auto Deploy to EC2
+name: Production Auto Deploy to EC2
 
 on:
   push:
     branches:
       - main
 
+concurrency:
+  group: production-deploy
+  cancel-in-progress: true
+
 jobs:
   deploy:
+    name: Deploy to EC2
     runs-on: ubuntu-latest
 
     steps:
-      - name: Create .env file for CI/CD
-        working-directory: ${{ github.workspace }}
-        run: |
-          echo "ENABLE_RUNTIME_EMAILS=true" > .env
-          echo "EMAIL_RATE_LIMIT_SECONDS=60" >> .env
-          echo "SMTP_USERNAME=${{ secrets.SMTP_USERNAME }}" >> .env
-          echo "SMTP_PASSWORD=${{ secrets.SMTP_PASSWORD }}" >> .env
-          echo "EMAIL_FROM=${{ secrets.EMAIL_FROM }}" >> .env
-          echo "EMAIL_TO=${{ secrets.RUNTIME_EMAIL_TO }}" >> .env
-          echo "EMAIL_TEAM=${{ secrets.EMAIL_TEAM }}" >> .env
-          echo "EMAIL_DEV=${{ secrets.EMAIL_DEV }}" >> .env
-          echo "EMAIL_QA=${{ secrets.EMAIL_QA }}" >> .env
-          echo "APP_ENV=ci" >> .env
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - name: Move .env to compose directory
-        working-directory: ${{ github.workspace }}
-        run: cp .env docker-compose.yml ./
-      - name: Create EC private/public key files
-        uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.EC2_SSH_KEY }}
-          script: |
-            cd /var/www/your-repo/auth-service
-            echo "${{ secrets.EC_PRIVATE_PEM }}" > ec_private.pem
-            echo "${{ secrets.EC_PUBLIC_PEM }}" > ec_public.pem
-
-
-      - name: Deploy to EC2 via SSH (with health check and rollback)
-        id: deploy-ec2
+      - name: Deploy to EC2 (with rollback and health check)
+        id: deploy
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.EC2_HOST }}
@@ -48,59 +27,93 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             set -e
-            cd /var/www/your-repo
-            echo "Saving current commit for rollback..."
-            git rev-parse HEAD > .last_successful_commit
-            git pull origin main
-            sudo systemctl restart backend
-            sudo systemctl restart nginx
-            echo "Waiting for app health..."
-            sleep 10
-            STATUS=$(curl -sf http://localhost:5000/health || echo fail)
-            if [ "$STATUS" != '{"status":"ok"}' ]; then
-              echo "Health check failed! Rolling back..."
-              git reset --hard $(cat .last_successful_commit)
-              sudo systemctl restart backend
-              sudo systemctl restart nginx
+
+            APP_DIR="/home/ubuntu/DevOps_Oct2025_Team2_Assignment-"
+            SERVICE_DIR="$APP_DIR/auth-service"
+
+            cd $APP_DIR
+
+            # Save current commit for rollback
+            git rev-parse HEAD > .previous_commit
+
+            # Fetch and reset to latest main
+            git fetch origin
+            git reset --hard origin/main
+
+            # Create production environment file
+            cat > $SERVICE_DIR/.env <<EOF
+            ENABLE_RUNTIME_EMAILS=true
+            EMAIL_RATE_LIMIT_SECONDS=60
+            SMTP_USERNAME=${{ secrets.SMTP_USERNAME }}
+            SMTP_PASSWORD=${{ secrets.SMTP_PASSWORD }}
+            EMAIL_FROM=${{ secrets.EMAIL_FROM }}
+            EMAIL_TEAM=${{ secrets.EMAIL_TEAM }}
+            EMAIL_DEV=${{ secrets.EMAIL_DEV }}
+            EMAIL_QA=${{ secrets.EMAIL_QA }}
+            APP_ENV=production
+            EOF
+
+            # Restart services
+            docker compose down
+            docker compose up -d --build
+
+            # Wait for service to initialise
+            sleep 15
+
+            # Health check
+            HEALTH=$(curl -s http://localhost:5000/health | grep ok || echo fail)
+
+            if [ "$HEALTH" = "fail" ]; then
+              echo "Health check failed. Rolling back."
+
+              git reset --hard $(cat .previous_commit)
+              docker compose down
+              docker compose up -d --build
+
               exit 1
             fi
-            echo "Deployment and health check successful."
 
+            echo "Deployment successful."
 
-
-      - name: Notify deployment via email
-        if: steps.deploy-ec2.outcome == 'success'
-        uses: appleboy/ssh-action@v1
+      - name: Send Success Email
+        if: steps.deploy.outcome == 'success'
+        uses: dawidd6/action-send-mail@v3
         with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.EC2_SSH_KEY }}
-          script: |
-            cd /var/www/your-repo/auth-service
-            export ENABLE_RUNTIME_EMAILS=true
-            export EMAIL_RATE_LIMIT_SECONDS=60
-            export SMTP_USERNAME=${{ secrets.SMTP_USERNAME }}
-            export SMTP_PASSWORD=${{ secrets.SMTP_PASSWORD }}
-            export EMAIL_FROM="Runtime Bot <${{ secrets.SMTP_USERNAME }}>"
-            export EMAIL_TEAM=${{ secrets.RUNTIME_EMAIL_TO }},${{ secrets.EMAIL_TEAM }},${{ secrets.EMAIL_DEV }},${{ secrets.EMAIL_QA }}
-            export APP_ENV=prod
-            python3 notify.py "deploy_success" "Deployment Successful" "The deployment to EC2 was successful."
+          server_address: smtp.gmail.com
+          server_port: 587
+          secure: false
+          username: ${{ secrets.SMTP_USERNAME }}
+          password: ${{ secrets.SMTP_PASSWORD }}
+          subject: "Production Deployment Successful"
+          to: ${{ secrets.EMAIL_TEAM }}
+          from: "CI Bot <${{ secrets.SMTP_USERNAME }}>"
+          body: |
+            Production deployment completed successfully.
 
+            Repository: ${{ github.repository }}
+            Branch: main
+            Commit: ${{ github.sha }}
 
-      - name: Notify rollback via email
-        if: failure() && steps.deploy-ec2.outcome == 'failure'
-        uses: appleboy/ssh-action@v1
+      - name: Send Failure Email
+        if: failure()
+        uses: dawidd6/action-send-mail@v3
         with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.EC2_SSH_KEY }}
-          script: |
-            cd /var/www/your-repo/auth-service
-            export ENABLE_RUNTIME_EMAILS=true
-            export EMAIL_RATE_LIMIT_SECONDS=60
-            export SMTP_USERNAME=${{ secrets.SMTP_USERNAME }}
-            export SMTP_PASSWORD=${{ secrets.SMTP_PASSWORD }}
-            export EMAIL_FROM="Runtime Bot <${{ secrets.SMTP_USERNAME }}>"
-            export EMAIL_TEAM=${{ secrets.RUNTIME_EMAIL_TO }},${{ secrets.EMAIL_TEAM }},${{ secrets.EMAIL_DEV }},${{ secrets.EMAIL_QA }}
-            export APP_ENV=prod
-            python3 notify.py "deploy_rollback" "Deployment Rollback" "The deployment to EC2 failed and was rolled back."
+          server_address: smtp.gmail.com
+          server_port: 587
+          secure: false
+          username: ${{ secrets.SMTP_USERNAME }}
+          password: ${{ secrets.SMTP_PASSWORD }}
+          subject: "Production Deployment Failed (Rollback Executed)"
+          to: ${{ secrets.EMAIL_TEAM }}
+          from: "CI Bot <${{ secrets.SMTP_USERNAME }}>"
+          body: |
+            Production deployment failed.
+
+            A rollback was executed automatically.
+
+            Repository: ${{ github.repository }}
+            Branch: main
+            Commit: ${{ github.sha }}
+
+            Check logs:
+            ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
