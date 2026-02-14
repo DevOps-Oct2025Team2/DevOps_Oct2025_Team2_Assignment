@@ -74,7 +74,7 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           target: 'http://localhost:3000'
-          cmd_options: '-a -j -l WARN -config api.disablekey=true -port 8090'
+          cmd_options: '-a -j -l WARN'
           allow_issue_writing: false
           artifact_name: zap_ui_scan
 
