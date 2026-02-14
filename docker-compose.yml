@@ -26,7 +26,6 @@ services:
 
   file-service:
     build: ./file-service
-    env_file: .env
     environment:
       DATABASE_URL: postgresql+psycopg2://file_user:file_pass@file-db:5432/file_db
       UPLOAD_DIR: /data/uploads
@@ -52,7 +51,6 @@ services:
 
   auth-service:
     build: ./auth-service
-    env_file: .env
     environment:
       DATABASE_URL: postgresql+psycopg2://auth_user:auth_pass@auth-db:5432/auth_db
 
