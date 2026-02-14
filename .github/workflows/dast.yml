@@ -68,6 +68,12 @@ jobs:
           docker compose -f docker-compose.yml -f docker-compose.ci.yml exec -T auth-service python -c "import urllib.request as u; resp=u.urlopen('http://localhost:5000/health', timeout=2); print('status', resp.status); print(resp.read().decode('utf-8', errors='ignore'))" || true
           exit 1
 
+        # Free port 8080 before running ZAP
+      - name: Free port 8080 if in use
+        run: |
+          sudo lsof -i :8080 || true
+          sudo fuser -k 8080/tcp || true
+
       # Step 4: ZAP Baseline Scan - UI Gateway
       - name: ZAP Baseline Scan - UI Gateway
         uses: zaproxy/action-baseline@v0.15.0
@@ -91,7 +97,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           target: 'auth-service/openapi.yaml'
           format: 'openapi'
-          cmd_options: '-a -j -l WARN -p 8090'
+          cmd_options: '-a -j -l WARN'
           allow_issue_writing: false
           artifact_name: zap_auth_scan
 
@@ -108,7 +114,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           target: 'file-service/openapi.yaml'
           format: 'openapi'
-          cmd_options: '-a -j -l WARN -p 8090'
+          cmd_options: '-a -j -l WARN'
           allow_issue_writing: false
           artifact_name: zap_file_scan
 
