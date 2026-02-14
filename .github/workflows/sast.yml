@@ -70,7 +70,7 @@ jobs:
 
 
   notify-stakeholders:
-    name: Notify Stakeholders (Email)
+    name: Notify QA (Email)
     runs-on: ubuntu-latest
     needs: [analyze]
     if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -86,7 +86,7 @@ jobs:
           username: ${{ secrets.SMTP_USERNAME }}
           password: ${{ secrets.SMTP_PASSWORD }}
           subject: "[SAST] ${{ github.repository }} @ ${{ github.ref_name }}"
-          to: ${{ secrets.EMAIL_TO }}
+          to: ${{ secrets.EMAIL_QA }}
           from: "CI Bot <${{ secrets.SMTP_USERNAME }}>"
           body: |
             SAST (CodeQL): SUCCESS 
@@ -105,7 +105,7 @@ jobs:
           username: ${{ secrets.SMTP_USERNAME }}
           password: ${{ secrets.SMTP_PASSWORD }}
           subject: "[SAST] ${{ github.repository }} @ ${{ github.ref_name }}"
-          to: ${{ secrets.EMAIL_TO }}
+          to: ${{ secrets.EMAIL_QA }}
           from: "CI Bot <${{ secrets.SMTP_USERNAME }}>"
           body: |
             SAST (CodeQL): FAILURE 

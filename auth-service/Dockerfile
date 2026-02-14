@@ -28,8 +28,14 @@ RUN pip install --no-cache-dir --upgrade pip \
        jaraco.context>=6.1.0 \
     && pip install --no-cache-dir --upgrade -r requirements.txt
 
-# Copy the application source code into the container
+
+# Copy all source code except ec_private.pem (handled at runtime)
 COPY . .
+RUN rm -f ec_private.pem
+
+# At runtime, mount ec_private.pem using a bind mount or Docker secret:
+#   docker run -v /path/to/ec_private.pem:/app/ec_private.pem:ro ...
+
 
 # Run the application as a non-root user
 USER appuser

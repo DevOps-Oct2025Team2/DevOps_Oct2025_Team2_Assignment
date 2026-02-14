@@ -24,13 +24,16 @@ def notify_event(event_type: str, subject: str, body: str, dedupe_key: str = "")
     - Does nothing if ENABLE_RUNTIME_EMAILS is false
     - Rate-limits per event_type to avoid spamming
     """
+    print(f"[NOTIFY] notify_event called: event_type={event_type}, subject={subject}, dedupe_key={dedupe_key}")
     if not _env_bool("ENABLE_RUNTIME_EMAILS", "false"):
+        print("[NOTIFY] ENABLE_RUNTIME_EMAILS is false, skipping.")
         return
 
     rate_limit_s = int(os.getenv("EMAIL_RATE_LIMIT_SECONDS", "60"))
 
     to_addr = route_recipients(event_type)
     if not to_addr:
+        print("[NOTIFY] No recipient for event_type, skipping.")
         return
     
     key = f"{event_type}:{dedupe_key}" if dedupe_key else event_type
@@ -38,20 +41,23 @@ def notify_event(event_type: str, subject: str, body: str, dedupe_key: str = "")
     now = time.time()
     last = _LAST_SENT.get(key, 0)
     if now - last < rate_limit_s:
+        print(f"[NOTIFY] Rate limit hit for key={key}, skipping.")
         return
     _LAST_SENT[key] = now
 
+    print(f"[NOTIFY] Sending email to {to_addr} with subject '{subject}'")
     send_email_smtp(to_addr, subject, body)
 
 def send_email_smtp(to_addr: str, subject: str, body: str) -> None:
     smtp_user = os.getenv("SMTP_USERNAME")
     smtp_pass = os.getenv("SMTP_PASSWORD")
     from_addr = os.getenv("EMAIL_FROM") or smtp_user
-    service = os.getenv("SERVICE_NAME", "file-service")
+    service = os.getenv("SERVICE_NAME", "auth-service")
     env = os.getenv("APP_ENV", "dev")
 
     # Fail quietly if not configured
     if not (smtp_user and smtp_pass and to_addr):
+        print("[NOTIFY] SMTP config missing, skipping email.")
         return
 
     msg = EmailMessage()
@@ -66,9 +72,14 @@ def send_email_smtp(to_addr: str, subject: str, body: str) -> None:
 
     msg.set_content(body)
 
-    with smtplib.SMTP("smtp.gmail.com", 587, timeout=10) as server:
-        server.ehlo()
-        server.starttls()
-        server.login(smtp_user, smtp_pass)
-        server.send_message(msg)
-
+    try:
+        print(f"[NOTIFY] Connecting to SMTP server as {smtp_user}")
+        with smtplib.SMTP("smtp.gmail.com", 587, timeout=10) as server:
+            server.ehlo()
+            server.starttls()
+            server.login(smtp_user, smtp_pass)
+            server.send_message(msg)
+        print("[NOTIFY] Email sent successfully.")
+    except Exception as e:
+        print(f"[NOTIFY] Email send failed: {e}")
+        return

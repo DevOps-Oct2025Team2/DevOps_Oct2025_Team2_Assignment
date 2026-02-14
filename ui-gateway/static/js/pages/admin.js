@@ -2,11 +2,11 @@ const token = localStorage.getItem("access_token");
 
 if (!token) {
   alert("Unauthorized");
-  window.location.href = "/api/login";
+  window.location.href = "/login";
 }
 
 function loadUsers() {
-  fetch("http://localhost:5000/api/admin/users", {
+  fetch("/api/admin/users", {
     headers: {
       Authorization: `Bearer ${token}`
     }
@@ -69,7 +69,7 @@ function addUser() {
     return;
   }
 
-  fetch("http://localhost:5000/api/admin/users", {
+  fetch("/api/admin/users", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -98,7 +98,7 @@ function addUser() {
 function deleteUser(id) {
   if (!confirm("Are you sure you want to delete this user?")) return;
 
-  fetch(`http://localhost:5000/api/admin/users/${id}`, {
+  fetch(`/api/admin/users/${id}`, {
     method: "DELETE",
     headers: {
       Authorization: `Bearer ${token}`

@@ -12,7 +12,12 @@ def get_authenticated_user_id(request):
         return None
 
     # Match user_service behavior
-    testing = os.getenv("TESTING") == "true"
+    testing = (
+    os.getenv("TESTING") == "true"
+    or os.getenv("CI") == "true"
+    or os.getenv("DOCKER") == "true"
+)
+
 
     if testing:
         alg = "HS256"
