@@ -36,7 +36,9 @@ jobs:
           EMAIL_TEAM: ${{ secrets.EMAIL_TEAM }}
           EMAIL_RATE_LIMIT_SECONDS: ${{ secrets.EMAIL_RATE_LIMIT_SECONDS }}
           APP_ENV: ${{ secrets.APP_ENV }}
-        working-directory: ${{ github.workspace }}
+
+      - name: "Debug: List files in workspace"
+        run: ls -al
 
       - name: Create ec_private.pem from secret
         run: |
