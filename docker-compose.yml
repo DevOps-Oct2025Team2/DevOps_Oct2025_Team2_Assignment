@@ -51,7 +51,6 @@ services:
       - "5002:5002"
     volumes:
       - file_uploads:/data/uploads
-      - ./auth-service/ec_public.pem:/app/ec_public.pem:ro
 
   auth-service:
     build: ./auth-service
