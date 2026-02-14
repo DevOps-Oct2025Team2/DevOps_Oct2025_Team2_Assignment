@@ -10,6 +10,23 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Create .env file for CI/CD
+        working-directory: ${{ github.workspace }}
+        run: |
+          echo "ENABLE_RUNTIME_EMAILS=true" > .env
+          echo "EMAIL_RATE_LIMIT_SECONDS=60" >> .env
+          echo "SMTP_USERNAME=${{ secrets.SMTP_USERNAME }}" >> .env
+          echo "SMTP_PASSWORD=${{ secrets.SMTP_PASSWORD }}" >> .env
+          echo "EMAIL_FROM=${{ secrets.EMAIL_FROM }}" >> .env
+          echo "EMAIL_TO=${{ secrets.RUNTIME_EMAIL_TO }}" >> .env
+          echo "EMAIL_TEAM=${{ secrets.EMAIL_TEAM }}" >> .env
+          echo "EMAIL_DEV=${{ secrets.EMAIL_DEV }}" >> .env
+          echo "EMAIL_QA=${{ secrets.EMAIL_QA }}" >> .env
+          echo "APP_ENV=ci" >> .env
+
+      - name: Move .env to compose directory
+        working-directory: ${{ github.workspace }}
+        run: cp .env docker-compose.yml ./
       - name: Create EC private/public key files
         uses: appleboy/ssh-action@v1
         with:
@@ -21,19 +38,38 @@ jobs:
             echo "${{ secrets.EC_PRIVATE_PEM }}" > ec_private.pem
             echo "${{ secrets.EC_PUBLIC_PEM }}" > ec_public.pem
 
-      - name: Deploy to EC2 via SSH
+
+      - name: Deploy to EC2 via SSH (with health check and rollback)
+        id: deploy-ec2
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
+            set -e
             cd /var/www/your-repo
+            echo "Saving current commit for rollback..."
+            git rev-parse HEAD > .last_successful_commit
             git pull origin main
             sudo systemctl restart backend
             sudo systemctl restart nginx
+            echo "Waiting for app health..."
+            sleep 10
+            STATUS=$(curl -sf http://localhost:5000/health || echo fail)
+            if [ "$STATUS" != '{"status":"ok"}' ]; then
+              echo "Health check failed! Rolling back..."
+              git reset --hard $(cat .last_successful_commit)
+              sudo systemctl restart backend
+              sudo systemctl restart nginx
+              exit 1
+            fi
+            echo "Deployment and health check successful."
+
+
 
       - name: Notify deployment via email
+        if: steps.deploy-ec2.outcome == 'success'
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.EC2_HOST }}
@@ -46,6 +82,25 @@ jobs:
             export SMTP_USERNAME=${{ secrets.SMTP_USERNAME }}
             export SMTP_PASSWORD=${{ secrets.SMTP_PASSWORD }}
             export EMAIL_FROM="Runtime Bot <${{ secrets.SMTP_USERNAME }}>"
-            export EMAIL_TEAM=${{ secrets.RUNTIME_EMAIL_TO }}
+            export EMAIL_TEAM=${{ secrets.RUNTIME_EMAIL_TO }},${{ secrets.EMAIL_TEAM }},${{ secrets.EMAIL_DEV }},${{ secrets.EMAIL_QA }}
             export APP_ENV=prod
             python3 notify.py "deploy_success" "Deployment Successful" "The deployment to EC2 was successful."
+
+
+      - name: Notify rollback via email
+        if: failure() && steps.deploy-ec2.outcome == 'failure'
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            cd /var/www/your-repo/auth-service
+            export ENABLE_RUNTIME_EMAILS=true
+            export EMAIL_RATE_LIMIT_SECONDS=60
+            export SMTP_USERNAME=${{ secrets.SMTP_USERNAME }}
+            export SMTP_PASSWORD=${{ secrets.SMTP_PASSWORD }}
+            export EMAIL_FROM="Runtime Bot <${{ secrets.SMTP_USERNAME }}>"
+            export EMAIL_TEAM=${{ secrets.RUNTIME_EMAIL_TO }},${{ secrets.EMAIL_TEAM }},${{ secrets.EMAIL_DEV }},${{ secrets.EMAIL_QA }}
+            export APP_ENV=prod
+            python3 notify.py "deploy_rollback" "Deployment Rollback" "The deployment to EC2 failed and was rolled back."

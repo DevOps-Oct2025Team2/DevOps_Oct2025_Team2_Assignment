@@ -44,10 +44,20 @@ def _proxy_request(base_url, path):
     else:
         data = request.get_data() or None
 
+
+    # SSRF Mitigation: Only allow certain path patterns (example: alphanumeric, dashes, slashes)
+    import re
+    if not re.match(r'^[\w\-/]+$', path):
+        return {"error": "Invalid path."}, 400
+
+    # Prevent open redirect/host injection by not allowing protocol or double slashes
+    if '//' in path or path.startswith('http'):
+        return {"error": "Invalid path."}, 400
+
     try:
         resp = requests.request(
             method=request.method,
-            url=f"{base_url}/{path}",
+            url=f"{base_url}/{path.lstrip('/')}" ,
             params=params,
             json=json_body,
             data=data,
@@ -56,10 +66,12 @@ def _proxy_request(base_url, path):
             timeout=10
         )
 
+        # XSS Mitigation: Do not reflect user input directly, and set content-type safely
+        safe_content_type = resp.headers.get('Content-Type', 'text/plain')
         return Response(
             resp.content,
             resp.status_code,
-            resp.headers.items()
+            {k: v for k, v in resp.headers.items() if k.lower() != 'content-type'} | {"Content-Type": safe_content_type}
         )
 
     except requests.RequestException as e:
