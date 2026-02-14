@@ -1,6 +1,4 @@
 import os
-import logging
-import sys
 from dotenv import load_dotenv
 
 # Load shared .env FIRST
@@ -21,34 +19,7 @@ from datetime import datetime, timezone
 def create_app(database_uri=None):
     app = Flask(__name__)
 
-    def configure_logging(app: Flask):
-        handler = logging.StreamHandler(sys.stdout)
-        formatter = logging.Formatter(
-            fmt="%(asctime)sZ | %(levelname)s | %(name)s | service=%(service)s | %(message)s",
-            datefmt="%Y-%m-%dT%H:%M:%S",
-        )
-        handler.setFormatter(formatter)
-
-        # Replace default handlers so format is consistent
-        app.logger.handlers.clear()
-        app.logger.propagate = False
-        app.logger.addHandler(handler)
-        app.logger.setLevel(os.getenv("LOG_LEVEL", "INFO").upper())
-
-        # Add a default field into log records
-        old_factory = logging.getLogRecordFactory()
-
-        def record_factory(*args, **kwargs):
-            record = old_factory(*args, **kwargs)
-            record.service = os.getenv("SERVICE_NAME", "file-service")
-            return record
-
-        logging.setLogRecordFactory(record_factory)
-
-    configure_logging(app)
-    
     app.config["ENABLE_METRICS"] = os.getenv("ENABLE_METRICS", "true").lower() == "true"
-    app.logger.info("logging_ready | enable_metrics=%s", app.config.get("ENABLE_METRICS"))
 
     if app.config["ENABLE_METRICS"]:
         metrics = PrometheusMetrics(app)
@@ -78,7 +49,11 @@ def create_app(database_uri=None):
 
     app.config["UPLOAD_DIR"] = os.getenv("UPLOAD_DIR", "uploads")
     app.config["MAX_UPLOAD_SIZE_BYTES"] = 5 * 1024 * 1024
-    app.config["ALLOWED_CONTENT_TYPES"] = {"text/plain", "image/png"}
+    app.config["ALLOWED_CONTENT_TYPES"] = {
+        "text/plain",
+        "image/png",
+        "image/x-png"
+    }
 
     db.init_app(app)
     Migrate(app, db)
@@ -161,5 +136,4 @@ def create_app(database_uri=None):
 app = create_app() if os.getenv("DATABASE_URL") else None
 
 if __name__ == "__main__":
-    app = create_app()
     app.run(host="0.0.0.0", port=5002)
