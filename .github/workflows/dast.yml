@@ -91,7 +91,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           target: 'auth-service/openapi.yaml'
           format: 'openapi'
-          cmd_options: '-a -j -l WARN -config api.disablekey=true -port 8090'
+          cmd_options: '-a -j -l WARN -p 8090'
           allow_issue_writing: false
           artifact_name: zap_auth_scan
 
@@ -108,7 +108,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           target: 'file-service/openapi.yaml'
           format: 'openapi'
-          cmd_options: '-a -j -l WARN -config api.disablekey=true -port 8090'
+          cmd_options: '-a -j -l WARN -p 8090'
           allow_issue_writing: false
           artifact_name: zap_file_scan
 
