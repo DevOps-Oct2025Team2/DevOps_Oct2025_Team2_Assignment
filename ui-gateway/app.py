@@ -2,6 +2,7 @@ from flask import Flask, render_template, redirect, request, Response
 from prometheus_flask_exporter import PrometheusMetrics
 import requests
 import os
+from flask import jsonify
 
 app = Flask(__name__)
 
@@ -67,12 +68,16 @@ def _proxy_request(base_url, path):
         )
 
         # XSS Mitigation: Do not reflect user input directly, and set content-type safely
-        safe_content_type = resp.headers.get('Content-Type', 'text/plain')
-        return Response(
-            resp.content,
-            resp.status_code,
-            {k: v for k, v in resp.headers.items() if k.lower() != 'content-type'} | {"Content-Type": safe_content_type}
-        )
+        # Force JSON handling to prevent XSS
+        try:
+            return jsonify(resp.json()), resp.status_code
+        except ValueError:
+            # If not JSON, return as plain text safely
+            return Response(
+                resp.text,
+                status=resp.status_code,
+                content_type="text/plain; charset=utf-8"
+            )
 
     except requests.RequestException as e:
         print("PROXY ERROR:", repr(e))
