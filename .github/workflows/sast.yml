@@ -79,7 +79,7 @@ jobs:
 
     steps:
       - name: Send FAILURE email (DAST)
-        if: needs.dast-scan.result != 'success'
+        if: needs.analyze.result != 'success'
         uses: dawidd6/action-send-mail@v3
         with:
           server_address: smtp.gmail.com
