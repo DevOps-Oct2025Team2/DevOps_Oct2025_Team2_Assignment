@@ -1,6 +1,4 @@
 import os
-import logging
-import sys
 from dotenv import load_dotenv
 
 # Load shared .env FIRST
@@ -21,34 +19,7 @@ from datetime import datetime, timezone
 def create_app(database_uri=None):
     app = Flask(__name__)
 
-    def configure_logging(app: Flask):
-        handler = logging.StreamHandler(sys.stdout)
-        formatter = logging.Formatter(
-            fmt="%(asctime)sZ | %(levelname)s | %(name)s | service=%(service)s | %(message)s",
-            datefmt="%Y-%m-%dT%H:%M:%S",
-        )
-        handler.setFormatter(formatter)
-
-        # Replace default handlers so format is consistent
-        app.logger.handlers.clear()
-        app.logger.propagate = False
-        app.logger.addHandler(handler)
-        app.logger.setLevel(os.getenv("LOG_LEVEL", "INFO").upper())
-
-        # Add a default field into log records
-        old_factory = logging.getLogRecordFactory()
-
-        def record_factory(*args, **kwargs):
-            record = old_factory(*args, **kwargs)
-            record.service = os.getenv("SERVICE_NAME", "file-service")
-            return record
-
-        logging.setLogRecordFactory(record_factory)
-
-    configure_logging(app)
-    
     app.config["ENABLE_METRICS"] = os.getenv("ENABLE_METRICS", "true").lower() == "true"
-    app.logger.info("logging_ready | enable_metrics=%s", app.config.get("ENABLE_METRICS"))
 
     if app.config["ENABLE_METRICS"]:
         metrics = PrometheusMetrics(app)
@@ -78,7 +49,11 @@ def create_app(database_uri=None):
 
     app.config["UPLOAD_DIR"] = os.getenv("UPLOAD_DIR", "uploads")
     app.config["MAX_UPLOAD_SIZE_BYTES"] = 5 * 1024 * 1024
-    app.config["ALLOWED_CONTENT_TYPES"] = {"text/plain", "image/png"}
+    app.config["ALLOWED_CONTENT_TYPES"] = {
+        "text/plain",
+        "image/png",
+        "image/x-png"
+    }
 
     db.init_app(app)
     Migrate(app, db)
@@ -86,70 +61,27 @@ def create_app(database_uri=None):
     from routes import bp
     app.register_blueprint(bp)
 
-    def _sanitize_for_log(value):
-        """
-        Basic log injection mitigation:
-        - convert to string
-        - remove CR/LF to prevent log forging
-        """
-        if value is None:
-            return "-"
-        text = str(value)
-        return text.replace("\r", "").replace("\n", "")
-
-    @app.before_request
-    def _log_request():
-        method = _sanitize_for_log(request.method)
-        path = _sanitize_for_log(request.path)
-        ip = _sanitize_for_log(request.remote_addr)
-        ua = _sanitize_for_log(request.headers.get("User-Agent", "-"))
-
-        app.logger.info(
-            "request | method=%s path=%s ip=%s ua=%s",
-            method,
-            path,
-            ip,
-            ua,
-        )
-
-    @app.after_request
-    def _log_response(resp):
-        method = _sanitize_for_log(request.method)
-        path = _sanitize_for_log(request.path)
-
-        app.logger.info(
-            "response | method=%s path=%s status=%s",
-            method,
-            path,
-            resp.status_code,
-        )
-        return resp
-
     @app.errorhandler(Exception)
     def handle_unhandled_exception(e):
+        # Let Flask handle normal HTTP errors (404, 401 etc.) normally
         if isinstance(e, HTTPException):
             return e
 
-        method = _sanitize_for_log(request.method)
-        path = _sanitize_for_log(request.path)
-        ip = _sanitize_for_log(request.remote_addr)
-
-        app.logger.exception("unhandled_exception | method=%s path=%s", method, path)
-
+        # Send ONE alert email for unexpected server errors
         notify_event(
             event_type="server_error",
-            dedupe_key=f"{method}:{path}:{ip}",
+            dedupe_key=f"{request.method}:{request.path}:{request.remote_addr}",
             subject="Unhandled exception (500)",
             body=(
                 f"ts={datetime.now(timezone.utc).isoformat()} "
                 f"service={os.getenv('SERVICE_NAME','file-service')} "
                 f"event=server_error status=500 "
-                f"method={method} path={path} "
-                f"ip={ip} "
+                f"method={request.method} path={request.path} "
+                f"ip={request.remote_addr} "
                 f"error={type(e).__name__}"
             ),
         )
-
+        # Return safe response to client
         return jsonify({"error": "Internal Server Error"}), 500
 
     @app.get("/health")
@@ -161,5 +93,4 @@ def create_app(database_uri=None):
 app = create_app() if os.getenv("DATABASE_URL") else None
 
 if __name__ == "__main__":
-    app = create_app()
     app.run(host="0.0.0.0", port=5002)
