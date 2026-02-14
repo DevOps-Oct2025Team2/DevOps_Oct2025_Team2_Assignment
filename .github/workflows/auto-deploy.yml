@@ -77,6 +77,7 @@ jobs:
 
       - name: Send Success Email
         if: steps.deploy.outcome == 'success'
+        continue-on-error: true
         uses: dawidd6/action-send-mail@v3
         with:
           server_address: smtp.gmail.com
@@ -97,6 +98,7 @@ jobs:
       # Gmail daily sending limit exceeded. Consider switching to another SMTP provider (e.g., Outlook, SendGrid, Mailgun) and update credentials below.
       - name: Send Failure Email
         if: failure()
+        continue-on-error: true
         uses: dawidd6/action-send-mail@v3
         with:
           server_address: smtp.gmail.com

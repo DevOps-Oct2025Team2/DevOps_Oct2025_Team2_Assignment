@@ -177,6 +177,7 @@ jobs:
 
     # Only run job on push to main
     if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+    continue-on-error: true
 
     steps:
       - name: Send FAILURE email (DAST)
