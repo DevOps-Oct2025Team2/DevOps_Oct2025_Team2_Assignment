@@ -69,33 +69,16 @@ jobs:
           path: reports/
 
 
-  notify-stakeholders:
-    name: Notify QA (Email)
+  notify-qa:
+    name: Notify QA (SAST Email)
     runs-on: ubuntu-latest
     needs: [analyze]
+
+    # Only run job on push to main
     if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
 
     steps:
-      - name: Send SUCCESS email (SAST)
-        if: needs.analyze.result == 'success'
-        uses: dawidd6/action-send-mail@v3
-        with:
-          server_address: smtp.gmail.com
-          server_port: 587
-          secure: false
-          username: ${{ secrets.SMTP_USERNAME }}
-          password: ${{ secrets.SMTP_PASSWORD }}
-          subject: "[SAST] ${{ github.repository }} @ ${{ github.ref_name }}"
-          to: ${{ secrets.EMAIL_QA }}
-          from: "CI Bot <${{ secrets.SMTP_USERNAME }}>"
-          body: |
-            SAST (CodeQL): SUCCESS 
-            Repo: ${{ github.repository }}
-            Branch: ${{ github.ref_name }}
-            Commit: ${{ github.sha }}
-            Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-
-      - name: Send FAILURE email (SAST)
+      - name: Send FAILURE email (DAST)
         if: needs.analyze.result != 'success'
         uses: dawidd6/action-send-mail@v3
         with:
@@ -104,15 +87,12 @@ jobs:
           secure: false
           username: ${{ secrets.SMTP_USERNAME }}
           password: ${{ secrets.SMTP_PASSWORD }}
-          subject: "[SAST] ${{ github.repository }} @ ${{ github.ref_name }}"
+          subject: "[DAST] FAILURE - ${{ github.repository }} @ ${{ github.ref_name }}"
           to: ${{ secrets.EMAIL_QA }}
           from: "CI Bot <${{ secrets.SMTP_USERNAME }}>"
           body: |
-            SAST (CodeQL): FAILURE 
+            DAST (OWASP ZAP): FAILURE
             Repo: ${{ github.repository }}
             Branch: ${{ github.ref_name }}
             Commit: ${{ github.sha }}
             Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-
-            Job result:
-            - analyze: ${{ needs.analyze.result }}
