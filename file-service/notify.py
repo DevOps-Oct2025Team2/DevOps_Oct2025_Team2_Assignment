@@ -41,7 +41,11 @@ def notify_event(event_type: str, subject: str, body: str, dedupe_key: str = "")
         return
     _LAST_SENT[key] = now
 
-    send_email_smtp(to_addr, subject, body)
+    try:
+        send_email_smtp(to_addr, subject, body)
+    except Exception as e:
+        print("EMAIL FAILED:", repr(e))
+
 
 def send_email_smtp(to_addr: str, subject: str, body: str) -> None:
     smtp_user = os.getenv("SMTP_USERNAME")
@@ -71,4 +75,3 @@ def send_email_smtp(to_addr: str, subject: str, body: str) -> None:
         server.starttls()
         server.login(smtp_user, smtp_pass)
         server.send_message(msg)
-

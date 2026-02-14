@@ -11,3 +11,4 @@ jaraco.context>=6.1.0
 wheel>=0.46.2
 python-dotenv
 prometheus-flask-exporter
+pytest-cov

@@ -1,3 +1,5 @@
+# Ignore private key files
+ec_private.pem
 # ======================
 # Python
 # ======================

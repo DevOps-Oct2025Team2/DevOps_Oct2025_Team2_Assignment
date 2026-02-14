@@ -10,3 +10,4 @@ wheel>=0.46.2
 cryptography
 prometheus-flask-exporter
 python-dotenv
+pytest-cov
