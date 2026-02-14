@@ -88,11 +88,11 @@ jobs:
         run: npm test
         working-directory: system-tests/auth
 
-      - name: Upload auth system test artifacts
+      - name: Upload auth system test artifacts (pre-dashboard)
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: system-tests-auth
+          name: system-tests-auth-pre-dashboard-${{ github.run_id }}-${{ github.job }}
           path: system-tests/auth
 
       - name: Install dashboard system test dependencies
@@ -103,11 +103,11 @@ jobs:
         run: npm test
         working-directory: system-tests/dashboard
 
-      - name: Upload auth system test artifacts
+      - name: Upload auth system test artifacts (post-dashboard)
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: system-tests-auth
+          name: system-tests-auth-post-dashboard-${{ github.run_id }}-${{ github.job }}
           path: system-tests/auth
           
       - name: Stop services
