@@ -14,6 +14,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+
       - name: Create .env file for CI
         run: |
           echo "ENABLE_RUNTIME_EMAILS=true" > .env
@@ -27,6 +28,11 @@ jobs:
           echo "RELEASE_EMAIL_TO=${{ secrets.RELEASE_EMAIL_TO }}" >> .env
           echo "APP_ENV=ci" >> .env
         working-directory: ${{ github.workspace }}
+
+      - name: Create ec_private.pem from secret
+        run: |
+          echo "${{ secrets.EC_PRIVATE_PEM }}" > ec_private.pem
+        working-directory: ${{ github.workspace }}/auth-service
 
       - name: Start services with Docker Compose
         run: |
