@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.3.0](https://github.com/DevOps-Oct2025Team2/DevOps_Oct2025_Team2_Assignment/compare/v1.2.0...v1.3.0) (2026-02-15)
+
+
+### Features
+
+* add auto deployment ([#86](https://github.com/DevOps-Oct2025Team2/DevOps_Oct2025_Team2_Assignment/issues/86)) ([f3e92c1](https://github.com/DevOps-Oct2025Team2/DevOps_Oct2025_Team2_Assignment/commit/f3e92c10816b5f69c653120edcf077f7bab5f495))
+
+
+### Bug Fixes
+
+* auto-deployment success ([#93](https://github.com/DevOps-Oct2025Team2/DevOps_Oct2025_Team2_Assignment/issues/93)) ([c01a93f](https://github.com/DevOps-Oct2025Team2/DevOps_Oct2025_Team2_Assignment/commit/c01a93f15dae4c0383e974413b8326299e15d3b7))
+* continue workflow when email limit reached ([#92](https://github.com/DevOps-Oct2025Team2/DevOps_Oct2025_Team2_Assignment/issues/92)) ([2d18141](https://github.com/DevOps-Oct2025Team2/DevOps_Oct2025_Team2_Assignment/commit/2d181417c9e589a208fda18185c6099305cd98df))
+* fix notification email for deploy and security scans ([#88](https://github.com/DevOps-Oct2025Team2/DevOps_Oct2025_Team2_Assignment/issues/88)) ([e09243e](https://github.com/DevOps-Oct2025Team2/DevOps_Oct2025_Team2_Assignment/commit/e09243e3395af8344ec7c3074cb6638af330c0ce))
+
 ## [1.2.0](https://github.com/DevOps-Oct2025Team2/DevOps_Oct2025_Team2_Assignment-/compare/v1.1.0...v1.2.0) (2026-02-09)
 
 
