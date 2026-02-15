@@ -67,8 +67,7 @@ jobs:
         with:
           name: sast-reports
           path: reports/
-
-
+  
   notify-qa:
     name: Notify QA (SAST Email)
     runs-on: ubuntu-latest
@@ -79,7 +78,7 @@ jobs:
     continue-on-error: true
 
     steps:
-      - name: Send FAILURE email (DAST)
+      - name: Send FAILURE email (SAST)
         if: needs.analyze.result != 'success'
         uses: dawidd6/action-send-mail@v3
         with:
@@ -88,12 +87,18 @@ jobs:
           secure: false
           username: ${{ secrets.SMTP_USERNAME }}
           password: ${{ secrets.SMTP_PASSWORD }}
-          subject: "[DAST] FAILURE - ${{ github.repository }} @ ${{ github.ref_name }}"
+          subject: "[SAST] FAILURE - ${{ github.repository }} @ ${{ github.ref_name }}"
           to: ${{ secrets.EMAIL_QA }}
           from: "CI Bot <${{ secrets.SMTP_USERNAME }}>"
           body: |
-            DAST (OWASP ZAP): FAILURE
-            Repo: ${{ github.repository }}
+            SAST (Static Application Security Testing): FAILURE
+
+            Tool: CodeQL
+            Repo:   ${{ github.repository }}
             Branch: ${{ github.ref_name }}
             Commit: ${{ github.sha }}
-            Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            Run:    ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+            Failed job: analyze
+            Result: ${{ needs.analyze.result }}
+

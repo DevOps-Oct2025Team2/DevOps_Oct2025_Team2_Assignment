@@ -1,464 +1,249 @@
-# 📦 Project Local Setup & Architecture Guide
+# DevSecOps Microservices Project
 
-This repository documents how the team runs the project **locally** using a **standardised setup**, ensuring that developers, lecturers, testers, and CI runners can all execute the system **consistently and reliably**. 
+[![CI](https://github.com/DevOps-Oct2025Team2/DevOps_Oct2025_Team2_Assignment-/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/DevOps-Oct2025Team2/DevOps_Oct2025_Team2_Assignment-/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/DevOps-Oct2025Team2/DevOps_Oct2025_Team2_Assignment-/actions/workflows/sast.yml/badge.svg?branch=main)](https://github.com/DevOps-Oct2025Team2/DevOps_Oct2025_Team2_Assignment-/actions/workflows/sast.yml)
+[![Release](https://img.shields.io/github/v/release/DevOps-Oct2025Team2/DevOps_Oct2025_Team2_Assignment-)](https://github.com/DevOps-Oct2025Team2/DevOps_Oct2025_Team2_Assignment-/releases)
+[![Docker](https://img.shields.io/badge/docker-compose-2496ED?logo=docker&logoColor=white)](https://www.docker.com/products/docker-desktop/)
+[![Python](https://img.shields.io/badge/python-3.11-3776AB?logo=python&logoColor=white)](https://www.python.org/downloads/)
 
----
+A production-oriented DevSecOps template for Flask microservices with automated security validation, containerised workflows, and CI-driven quality controls.
 
-## 🔍 High-Level Overview
+## System Overview
 
-This project is built using a **multi-service backend architecture**.
+- Flask microservices: auth-service, file-service, ui-gateway.
+- Per-service PostgreSQL databases and migrations.
+- Local orchestration with Docker Compose; CI/CD with GitHub Actions.
+- Security gates: SAST, SCA, DAST, and Trivy image scans.
+- Observability via Prometheus and Grafana; deployment to EC2 on main.
 
-* The system consists of multiple **Flask backend services**
-  (e.g. `auth-service`, `file-service`)
-* Each service:
+## Architecture
 
-  * Has its **own PostgreSQL database**
-  * Is started using **Docker Compose**
-* PostgreSQL runs **inside Docker containers**
+- auth-service
+  - Issues JWTs, enforces roles, and manages users.
+  - DB: auth-db (Postgres).
+- file-service
+  - File dashboard, upload, download, delete endpoints.
+  - JWT validation, upload validation, ownership enforcement.
+  - DB: file-db (Postgres).
+- ui-gateway
+  - Serves UI pages and proxies API calls to backend services.
+- observability
+  - Prometheus scrapes service metrics.
+  - Grafana provides dashboards.
 
-  * No manual database installation required
-* **Database schema is shared via migrations**
-
-  * Migration files are committed to Git
-  * Actual data is **never shared**
-* Every developer has:
-
-  * Their own local data
-  * The same database structure
-
----
-
-## 🧠 Key Concepts Explained
-
-### 1️⃣ Docker-Managed Databases
-
-* Docker Compose starts all databases (e.g. `auth-db`, `file-db`)
-* Everyone runs:
-
-  * The same database engine
-  * The same version
-* Data is stored in **Docker volumes**
-
-  * Containers can restart without data loss
-  * Data is deleted **only** if volumes are explicitly removed
-
----
-
-### 2️⃣ Service Independence
-
-Each backend service is fully isolated:
-
-* Independent Flask application
-* Separate database connection
-* Own database tables
-* Own `migrations/` folder
-
-This design:
-
-* Prevents cross-service interference
-* Improves scalability
-* Simplifies testing and ownership
-
----
-
-### 3️⃣ Database Migrations (No Manual Table Creation)
-
-* Tables are defined using Python models (`models.py`)
-* `Flask-Migrate` generates migration scripts
-* Migration files are committed to Git
-* Any developer or CI runner can recreate the schema by running migrations
-
-This guarantees:
-
-* Identical database structures for everyone
-* No shared data
-* Repeatable setup for grading and CI
-
----
-
-### 4️⃣ Clear Ownership Responsibilities
-
-* `auth-service` developer owns:
-
-  * Auth tables
-  * Auth migrations
-* `file-service` developer owns:
-
-  * File tables
-  * File migrations
-* Team members:
-
-  * Pull migrations from Git
-  * Apply them locally
-
-This avoids:
-
-* Conflicts
-* Accidental schema changes
-* Responsibility ambiguity
-
----
-
-### 5️⃣ Sample Users for Local Testing
-
-* A script is provided to insert sample users into the auth database
-* Passwords are securely hashed
-* The script is **idempotent**
-
-  * Safe to re-run
-  * No duplicate users
-
-This supports smooth local development and testing.
-
----
-
-## 📁 File Service — User Dashboard (MVP)
-
-### Overview
-
-The **User Dashboard** is part of the File Service backend.
-
-It allows an authenticated user to retrieve **only their own uploaded files**.
-
-* Ownership checks are enforced **server-side**
-* Prevents data leakage between users
-* Built using **Test-Driven Development (TDD)**
-* Fully verified via automated backend tests
-
----
-
-### 📡 Endpoint
-
-```
-GET /dashboard
+```mermaid
+flowchart LR
+  UI[ui-gateway] -->|/api| AUTH[auth-service]
+  UI -->|/files| FILE[file-service]
+  AUTH --> AUTHDB[(auth-db)]
+  FILE --> FILEDB[(file-db)]
+  AUTH -->|/metrics| PROM[Prometheus]
+  FILE -->|/metrics| PROM
+  UI -->|/metrics| PROM
+  PROM --> GRAF[Grafana]
 ```
 
----
+## Why Microservices (vs Monolith)
 
-### 🎯 Purpose
+Trade-offs considered:
 
-* Display files uploaded by the authenticated user
-* Prevent access to other users’ files
-* Return an empty list when no files exist
+- Microservices add operational overhead (networking, monitoring, deployments) but improve ownership, scalability, and fault isolation.
+- A monolith simplifies local development, but changes in one domain can increase regression risk for others.
 
----
+Key design choices:
 
-## 🔐 Security & Access Rules (Acceptance Criteria)
+- Independent databases isolate data ownership, reduce cross-service coupling, and limit blast radius for schema changes.
+- JWT-based authentication lets services verify identity locally without synchronous calls to auth-service, reducing runtime coupling.
+- Docker Compose provides repeatable local environments and consistent service topology across developers.
+- CI does not rely on Docker Compose for unit-test stages to keep builds fast and deterministic; Compose is used only for system acceptance and DAST workflows.
 
-### AC-DASH-01 — Authorised Access
+## Services and Ports
 
-* User must be authenticated
-* Valid request returns **HTTP 200**
+| Service | Purpose | Port |
+| --- | --- | --- |
+| auth-service | Authentication and user management APIs | 5000 |
+| file-service | User file dashboard, upload, download, delete | 5002 |
+| ui-gateway | Web UI + API proxy | 3000 |
+| auth-db | Postgres for auth-service | 5433 (host) |
+| file-db | Postgres for file-service | 5434 (host) |
+| prometheus | Metrics scraping | 9090 |
+| grafana | Metrics dashboards | 3001 |
 
-### AC-DASH-02 — Unauthorised Access Prevention
+## Security Model and Validation
 
-* If user is not authenticated:
+Layered security controls executed automatically through CI/CD workflows and validated prior to integration:
 
-  * Access is denied
-  * **HTTP 401 Unauthorized** is returned
+- Identity: JWT-based authentication; HS256 in CI/TESTING, ES256 in production.
+- Authorization: role-based access control enforced in backend services.
+- Data isolation: per-service databases and per-user ownership enforcement in file-service.
+- Supply chain: SCA flags dependencies with CVSS >= 7; Trivy reports High/Critical image findings.
+- Runtime: DAST scans running services and reports High-severity findings.
+- Secrets: injected via environment variables and GitHub Secrets; no secrets stored in the repository.
 
-### AC-DASH-03 — User Data Isolation *(Security-Critical)*
+All workflows run automatically on push and pull request events. Results are visible before integration to ensure that security issues are identified early in the development lifecycle.
 
-* Only files owned by the authenticated user are returned
-* Ownership enforced server-side
-* Client-side manipulation cannot expose other users’ data
-* Test failure **fails the CI pipeline**
+Branch Governance:
 
-### AC-DASH-04 — Empty State Handling
+- The `main` branch requires pull requests before merging.
+- At least one approval is required before integration.
+- Conversation resolution is enforced prior to merge.
+- Status checks must complete successfully before merge.
+- Direct pushes to `main` are restricted.
 
-* If user has no uploaded files:
+Security workflows execute automatically on pull requests and push events, providing early validation before integration decisions are made.
 
-  * An empty list is returned
-  * No errors occur
+## CI/CD Overview
 
----
+| Workflow Name | Trigger | Purpose | Required Status Check | Deployment Impact |
+| --- | --- | --- | --- | --- |
+| ci.yml | push, pull_request | Unit tests, coverage, build, Trivy scan | Yes | None |
+| system-tests.yml | push, pull_request, manual | End-to-end system acceptance tests | No | None |
+| sast.yml | push, pull_request | CodeQL SAST (reports findings) | Yes (workflow completion) | None |
+| sca.yml | push, pull_request | Dependency scanning (CVSS >= 7 flagged) | Yes (workflow completion) | None |
+| dast.yml | push, pull_request (main, qa/qa, dev) | Runtime DAST scan | Yes (workflow completion) | None |
+| release-please.yml | push to main | Create/update release PR and tags | No | Prepares release artifacts |
+| auto-deploy.yml | push to main | Deploy to EC2 with health check and rollback | No | Production deployment |
+| pr-title-lint.yml | pull_request | Enforce semantic PR title | Yes | None |
 
-## 🔑 Authentication (Local Development)
+### Governance Model
 
-For local testing, authentication is simulated using an HTTP header:
+This project adopts a validation-first DevSecOps approach. Security and quality workflows run automatically for every change. Protected branch rules ensure pull request review and successful workflow completion before integration.
 
-```
-X-User-Id: <user_id>
-```
+While some workflows apply severity thresholds internally (e.g., CVSS scoring for dependency scans), enforcement is designed to balance security validation with development velocity within the scope of this academic MVP.
 
-Example:
+## Quickstart (Local)
 
-```
-X-User-Id: 1
-```
+1) Install external applications:
 
-This allows dashboard logic and security rules to be tested **independently** of the auth service.
+- Git: https://git-scm.com/downloads
+- Docker Desktop (includes Docker Compose): https://www.docker.com/products/docker-desktop/
+- Python 3.11: https://www.python.org/downloads/
+- Node.js 20: https://nodejs.org/en/download
 
----
-
-## 📤 Dashboard Response Format
-
-### Example Response
-
-```json
-{
-  "files": [
-    {
-      "id": 1,
-      "filename": "example.txt",
-      "storage_path": "/files/example.txt",
-      "content_type": "text/plain",
-      "size_bytes": 1234,
-      "created_at": "2026-01-17T12:00:00Z"
-    }
-  ]
-}
-```
-
-### Empty State
-
-```json
-{
-  "files": []
-}
-```
-
----
-
-## 🧪 Automated Testing — Ownership Isolation
-
-### What the Test Verifies
-
-* Multiple users exist in the database
-* Each user can own files
-* When the dashboard is queried for **User A**:
-
-  * Only User A’s files are returned
-  * Files owned by others are never exposed
-
-This directly validates **AC-DASH-03 (Security-Critical)**.
-
----
-
-## ▶️ Running Tests Locally (File Service)
-
-### Important Note
-
-Unit tests are **fully isolated** and do **not** require:
-
-* Docker
-* PostgreSQL
-
-Test environments:
-
-* `auth-service`: mocked dependencies
-* `file-service`: in-memory database
-
-This ensures:
-
-* Fast execution
-* Deterministic results
-* CI-safe testing
-
-### Run Tests
+2) Clone and enter the repo:
 
 ```bash
-cd file_service
-pytest
+git clone https://github.com/DevOps-Oct2025Team2/DevOps_Oct2025_Team2_Assignment-.git
+cd DevOps_Oct2025_Team2_Assignment-
 ```
 
-### Expected Output
+3) Create a local .env file in the repo root:
 
+```env
+EMAIL_RATE_LIMIT_SECONDS=60
+ENABLE_RUNTIME_EMAILS=false
+SMTP_USERNAME=
+SMTP_PASSWORD=
+EMAIL_FROM=
+EMAIL_TEAM=
+EMAIL_DEV=
+EMAIL_QA=
+APP_ENV=local
 ```
-1 passed
+
+4) Start services:
+
+```bash
+docker-compose up -d --build
 ```
 
-Failure indicates a security or ownership violation and blocks the pipeline.
+5) Run migrations:
 
----
+```bash
+docker-compose exec auth-service sh -c "FLASK_APP=app.py python -m flask db upgrade"
+docker-compose exec file-service sh -c "FLASK_APP=app.py python -m flask db upgrade"
+```
 
-## 🔐 Auth Service — Unit Testing
+6) Validate health checks:
 
-### Overview
+```bash
+curl -f http://localhost:5000/health
+curl -f http://localhost:5002/health
+curl -f http://localhost:3000/health
+```
 
-Auth-service tests are **true unit tests** and do not rely on:
+Expected response for each is a JSON payload with status ok.
 
-* Real databases
-* Docker containers
-* JWT key files on disk
+7) (Optional) Seed sample users:
 
-All cryptographic dependencies are injected or mocked.
+```bash
+docker-compose exec auth-service python sample_users.py
+```
 
----
+## Local vs CI Execution
 
-### ▶️ Running Auth-Service Tests
+- Local: Docker Compose + .env; stop services with `docker-compose down`.
+- CI: unit tests run without Compose; Compose is used only for system tests and DAST.
+- Secrets are injected via GitHub Actions in CI.
+
+## Testing
+
+### Unit Tests
 
 ```bash
 cd auth-service
 pip install -r requirements.txt
 pytest -v
-```
 
----
-
-### Environment Configuration
-
-* JWT signing and verification keys are provided via environment variables
-* No PEM files are read from disk
-
-This allows tests to run safely in:
-
-* Local development
-* CI pipelines
-* Isolated test environments
-
----
-
-### Expected Output (Excerpt)
-
-```
-==================== all tests passed ====================
-```
-
----
-
-## 🧩 Design Notes
-
-- Tests are true unit tests
-- No filesystem access is required
-- No secrets are committed to Git
-- No production credentials are used
-- Test failures will fail the CI pipeline
-
-# 📂 File Service – User Dashboard & File Upload
-
-This service provides backend APIs for:
-- Viewing a user’s uploaded files (`GET /dashboard`)
-- Uploading a new file (`POST /dashboard/upload`)
-
-The service enforces **user data isolation**, **upload validation**, and **server-side ownership checks**.
-
----
-
-## 🚀 How to Run (Local Development)
-
-### 1. Start required services
-From the project root:
-
-```bash
-docker-compose up -d
-This starts:
-
-file-db (PostgreSQL on port 5434)
-
-auth-db (PostgreSQL on port 5433)
-
-2. Install Python dependencies
-cd file_service
+cd ../file-service
 pip install -r requirements.txt
-⚠️ Ensure flask-cors is installed (already included in requirements.txt).
+pytest -v
+```
 
-3. Run database migrations
-python -m flask db upgrade
-4. Start the File Service
-python app.py
-The service runs on:
+### System Tests (Docker)
 
-http://localhost:5000
-🔍 Health Check
-Open in browser:
+```powershell
+./scripts/test_all.ps1
+```
 
-http://localhost:5000/health
-Expected response:
+This script runs unit tests, boots Docker Compose with CI overrides, and executes system tests.
 
-{ "status": "ok" }
-📄 API: View Dashboard Files
-Endpoint
-GET /dashboard
-Required Header
-X-User-Id: <number>
-Example:
+## Observability
 
-X-User-Id: 1
-How to Test (curl)
-curl -H "X-User-Id: 1" http://localhost:5000/dashboard
-Expected Results
-✅ Authenticated user
+- Each service exposes Prometheus metrics at /metrics.
+- Prometheus config: observability/prometheus.yml.
+- Grafana runs at http://localhost:3001.
 
-{
-  "files": []
-}
-(Empty list means no uploaded files)
+## CI/CD Setup Details
 
-❌ Unauthenticated / invalid user
+### Required GitHub Secrets
 
-HTTP 401 Unauthorized
+Set these in GitHub: Settings -> Secrets and variables -> Actions.
 
-📤 API: Upload File
-Endpoint
-POST /dashboard/upload
-Required Header
-X-User-Id: <number>
-Request Type
-multipart/form-data
-Field Name
-file
-How to Test (UI – Recommended)
-Start UI Gateway:
+Email/notification secrets:
 
-cd ui-gateway
-python app.py
-Open browser:
+- SMTP_USERNAME
+- SMTP_PASSWORD
+- EMAIL_FROM
+- EMAIL_TEAM
+- EMAIL_DEV
+- EMAIL_QA
+- EMAIL_RATE_LIMIT_SECONDS
+- ENABLE_RUNTIME_EMAILS
+- APP_ENV
 
-http://localhost:3000
-Login (development mode)
+Security/keys:
 
-Upload a file from the dashboard page
+- EC_PRIVATE_PEM (used by system tests to generate auth-service signing key)
 
-Upload Rules
-Only allowed file types are accepted
+Auto-deploy (production):
 
-File size must be within configured limits
+- EC2_HOST
+- EC2_USER
+- EC2_SSH_KEY
 
-Validation is enforced server-side
+### Execute Workflows Manually
 
-Expected Results
-✅ Valid file
+1) Go to the repository -> Actions tab.
+2) Select the workflow.
+3) Click Run workflow.
 
-HTTP 201 Created
+## Reuse as a Template
 
-File is stored
+This repository is intended as a reusable DevSecOps microservices baseline. To adopt it for a new project:
 
-File appears in dashboard
-
-❌ Invalid file (e.g. mp4 / too large)
-
-HTTP 400 Bad Request
-
-{
-  "error": "The uploaded file does not meet the upload requirements."
-}
-No file is stored
-
-🔐 Security Guarantees
-Users can only access their own files
-
-Ownership checks are enforced server-side
-
-Client-side manipulation cannot expose other users’ data
-
-🧪 Running Tests
-pytest
-Tests are fully isolated
-
-Uses in-memory SQLite
-
-No Docker required for unit tests
-
-
-Ok convert it into readme.md so i can copy code please
-
-
-### 🔐 JWT Security
-
-This project uses JSON Web Tokens (JWT) for authentication and authorization across services.
-- **Production & Runtime:** Uses **ES256**, an elliptic-curve–based asymmetric algorithm. Tokens are signed by the auth service using a private key and verified by other services using a public key, providing strong security and preventing token forgery.
-- **Testing & CI:** Uses **HS256** to simplify setup and ensure fast, reliable automated testing.
-This design balances strong production security with efficient local development and CI pipelines.
-
-
+- Replace service names and OpenAPI specs.
+- Update Docker Compose service definitions.
+- Keep security workflows and quality gates intact.
+- Update deployment secrets and targets.
+- Ensure branch protection rules require the same security checks.
